@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment / secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+CREDENTIALS.local.csv
+CREDENTIALS.local.md
+*_login.json
+
+# SQLite database files (local dev only — production data lives on the Railway volume)
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+server_debug*.log
+server_run.log
+client_run.log
+
+# Uploads (local dev scratch — production uploads should go to persistent/object storage)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
