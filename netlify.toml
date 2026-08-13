@@ -1,0 +1,11 @@
+[build]
+  base = "client"
+  command = "npm run build"
+  publish = "dist"
+
+# BrowserRouter needs every path to fall back to index.html — otherwise refreshing a deep link
+# like /employee-tasks returns Netlify's 404 instead of letting React Router handle it.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
