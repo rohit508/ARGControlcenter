@@ -1,7 +1,8 @@
 import { useAuthStore } from "../store/authStore";
 import { ApiClientError } from "./apiClient";
 
-const BASE = "/api/v1";
+// Same VITE_API_URL convention as apiClient.ts — see the comment there for why it's needed.
+const BASE = `${import.meta.env.VITE_API_URL ?? ""}/api/v1`;
 
 // apiClient.ts always JSON.stringifies the body and sets Content-Type: application/json, which
 // breaks multipart uploads — this is a small parallel client that sends FormData instead, while

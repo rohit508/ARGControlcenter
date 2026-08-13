@@ -1,6 +1,11 @@
 import { useAuthStore } from "../store/authStore";
 
-const BASE = "/api/v1";
+// In local dev, Vite's proxy (vite.config.ts) forwards a relative "/api/v1" to localhost:4000, so
+// no env var is needed. In production the client and server are typically deployed as separate
+// services with different origins, so VITE_API_URL must point at the deployed server's full
+// origin (e.g. "https://erp-server.up.railway.app") — set at build time, since Vite inlines
+// import.meta.env values into the bundle rather than reading them at runtime.
+const BASE = `${import.meta.env.VITE_API_URL ?? ""}/api/v1`;
 
 export class ApiClientError extends Error {
   status: number;
