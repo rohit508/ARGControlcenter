@@ -13,3 +13,11 @@ NIXPACKS_NODE_VERSION = "22"
 
 [phases.setup]
 nixPkgs = ["...", "python3", "gcc", "gnumake"]
+
+# The service's NODE_ENV=production Variable (needed at runtime for env.ts's validation) also
+# leaks into the build phase, which makes a plain `npm install` skip devDependencies — but this
+# app's own build step needs `tsc` (typescript) and its deploy-start migration/seed step needs
+# `ts-node`, both of which only live in devDependencies. --include=dev forces them in regardless
+# of what NODE_ENV happens to be set to during this phase.
+[phases.install]
+cmds = ["npm install --include=dev"]
