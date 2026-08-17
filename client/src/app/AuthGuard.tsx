@@ -5,7 +5,16 @@ import { ReactNode } from "react";
 // A plain "User" (no other elevated role) is confined to My Tasks / Task Analytics — this must
 // match AppShell's USER_ALLOWED_PATHS so the sidebar and direct-URL access agree. Blocking here
 // (not just hiding the nav link) is what makes the restriction real rather than cosmetic.
+// "/my-tasks" also covers its ticket-detail child route ("/my-tasks/:assignmentId").
 const USER_ALLOWED_PATHS = ["/my-tasks", "/task-analytics"];
+
+function isUserAllowedPath(pathname: string): boolean {
+  return USER_ALLOWED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+// Admin-only screens — blocked here (not just PermissionGuard) so a role that is neither Admin
+// nor plain "User" (e.g. Finance) can't reach them by typing the URL directly.
+const ADMIN_ONLY_PATHS = ["/admin/configuration", "/employees", "/admin/rbac", "/employee-tasks"];
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -15,8 +24,19 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.roles.includes("Admin") ?? false;
   const isPlainUser = !isAdmin && user?.roles.length === 1 && user.roles[0] === "User";
-  if (isPlainUser && !USER_ALLOWED_PATHS.includes(location.pathname)) {
-    return <Navigate to="/my-tasks" replace />;
+
+  if (isPlainUser && !isUserAllowedPath(location.pathname)) {
+    return <Navigate to="/task-analytics" replace />;
+  }
+
+  if (!isAdmin && ADMIN_ONLY_PATHS.includes(location.pathname)) {
+    return <Navigate to={isPlainUser ? "/task-analytics" : "/"} replace />;
+  }
+
+  // Admin lands on Task Analytics after login — the dashboard root is not part of Admin's
+  // primary nav group, so redirect off it instead of rendering the old landing page.
+  if (isAdmin && location.pathname === "/") {
+    return <Navigate to="/task-analytics" replace />;
   }
 
   return <>{children}</>;

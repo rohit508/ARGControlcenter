@@ -289,10 +289,16 @@ async function getAssignmentOrThrow(assignmentId: number) {
   return row;
 }
 
-async function authorizeAssignmentAccess(assignment: typeof employeeTaskAssignments.$inferSelect, user: AccessTokenPayload) {
+export async function authorizeAssignmentAccess(assignment: typeof employeeTaskAssignments.$inferSelect, user: AccessTokenPayload) {
   if (await canManageAllTasks(user)) return;
   const employeeId = await getCallerEmployeeId(user.userId);
   if (employeeId !== assignment.employeeId) throw forbidden();
+}
+
+// Exported so attachments.routes.ts can authorize voice-note/file uploads scoped to a single
+// ticket (assignment), the same way comments already are — see authorizeAssignmentAccess above.
+export async function getAssignmentForAccessCheck(assignmentId: number) {
+  return getAssignmentOrThrow(assignmentId);
 }
 
 // Deliberately NOT gated by requirePermission('employee-tasks','update') — that permission

@@ -8,7 +8,35 @@ import NotificationBell from "../components/ui/NotificationBell";
 import Toast from "../components/ui/Toast";
 import { useEmployeeTaskStats } from "../modules/employee-tasks/useEmployeeTasks";
 
+// Admin's primary workflow group — must render first, in this exact order, per product spec.
+// Items here are active for Admin; every other nav item is rendered visible-but-disabled (gray,
+// unclickable) for Admin rather than hidden, so the full app surface stays discoverable.
+const ADMIN_PRIMARY_PATHS = [
+  "/employee-tasks",
+  "/my-tasks",
+  "/task-analytics",
+  "/admin/configuration",
+  "/employees",
+  "/admin/rbac",
+];
+
 const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: string[] }[] }[] = [
+  {
+    label: "Employee Tasks",
+    items: [
+      { to: "/employee-tasks", label: "Task Board", roles: ["Admin"] },
+      { to: "/my-tasks", label: "My Tasks" },
+      { to: "/task-analytics", label: "Task Analytics" },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      { to: "/admin/configuration", label: "Configuration", roles: ["Admin"] },
+      { to: "/employees", label: "Employees", roles: ["Admin"] },
+      { to: "/admin/rbac", label: "Roles & Permissions", roles: ["Admin"] },
+    ],
+  },
   { label: "Overview", items: [{ to: "/", label: "Executive Dashboard" }] },
   {
     label: "Project Management",
@@ -24,22 +52,6 @@ const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: s
       { to: "/meetings", label: "Meeting Log" },
       { to: "/action-items", label: "Action Tracker" },
       { to: "/lessons-learned", label: "Lessons Learned" },
-    ],
-  },
-  {
-    label: "Employee Tasks",
-    items: [
-      { to: "/employee-tasks", label: "Task Board", roles: ["Admin"] },
-      { to: "/my-tasks", label: "My Tasks" },
-      { to: "/task-analytics", label: "Task Analytics" },
-    ],
-  },
-  {
-    label: "Administration",
-    items: [
-      { to: "/admin/configuration", label: "Configuration", roles: ["Admin"] },
-      { to: "/employees", label: "Employees", roles: ["Admin"] },
-      { to: "/admin/rbac", label: "Roles & Permissions", roles: ["Admin"] },
     ],
   },
   {
@@ -158,33 +170,65 @@ export default function AppShell() {
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
           {NAV_GROUPS.map((group) => {
-            const visibleItems = group.items.filter((item) => {
-              if (isAdmin) return true;
-              if (isPlainUser) return USER_ALLOWED_PATHS.includes(item.to);
-              return !item.roles || item.roles.some((r) => user?.roles.includes(r));
-            });
-            if (visibleItems.length === 0) return null;
+            // Plain Users only ever see their two allowed links — everything else stays hidden,
+            // not grayed, since admin section names shouldn't be visible to them at all.
+            const items = isPlainUser
+              ? group.items.filter((item) => USER_ALLOWED_PATHS.includes(item.to))
+              : group.items;
+            if (items.length === 0) return null;
+            const groupDisabled =
+              isAdmin && items.every((item) => !ADMIN_PRIMARY_PATHS.includes(item.to));
             return (
               <div key={group.label} className="mb-3">
                 {!collapsed && (
-                  <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{group.label}</div>
-                )}
-                {visibleItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === "/"}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 px-4 py-2 text-sm rounded-md mx-2 ${
-                        isActive
-                          ? "bg-brand-600 text-white"
-                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      }`
-                    }
+                  <div
+                    className={`px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide ${
+                      groupDisabled ? "text-slate-300 dark:text-slate-700" : "text-slate-400"
+                    }`}
                   >
-                    {collapsed ? item.label.slice(0, 1) : item.label}
-                  </NavLink>
-                ))}
+                    {group.label}
+                    {groupDisabled && <span className="ml-1 font-normal normal-case text-slate-300 dark:text-slate-700">(Coming Soon)</span>}
+                  </div>
+                )}
+                {items.map((item) => {
+                  const allowed = isAdmin
+                    ? ADMIN_PRIMARY_PATHS.includes(item.to)
+                    : !item.roles || item.roles.some((r) => user?.roles.includes(r));
+
+                  if (!allowed) {
+                    return (
+                      <span
+                        key={item.to}
+                        aria-disabled="true"
+                        title="Not available for your role"
+                        className="flex items-center gap-2 px-4 py-2 text-sm rounded-md mx-2 text-slate-400 dark:text-slate-600 opacity-50 cursor-not-allowed pointer-events-none select-none"
+                      >
+                        {collapsed ? item.label.slice(0, 1) : item.label}
+                        {/* Whole-group case already shows "(Coming Soon)" once on the group
+                            heading above — only repeat it here for a mixed group (some items
+                            active, this one not), so the tag isn't shown twice for the same item. */}
+                        {!collapsed && !groupDisabled && <span className="text-[10px] font-normal text-slate-400 dark:text-slate-600">(Coming Soon)</span>}
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.to === "/"}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-4 py-2 text-sm rounded-md mx-2 ${
+                          isActive
+                            ? "bg-brand-600 text-white"
+                            : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        }`
+                      }
+                    >
+                      {collapsed ? item.label.slice(0, 1) : item.label}
+                    </NavLink>
+                  );
+                })}
               </div>
             );
           })}

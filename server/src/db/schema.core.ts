@@ -112,6 +112,9 @@ export const attachments = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     entityType: text("entity_type").notNull(),
     entityId: integer("entity_id").notNull(),
+    // Optional link to a specific comment (e.g. a voice note recorded inline in a discussion
+    // thread) — null for attachments uploaded against the entity itself, not a single message.
+    commentId: integer("comment_id").references(() => comments.id),
     fileName: text("file_name").notNull(),
     filePath: text("file_path").notNull(),
     mimeType: text("mime_type").notNull(),
@@ -119,7 +122,7 @@ export const attachments = sqliteTable(
     uploadedBy: integer("uploaded_by").notNull().references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   },
-  (t) => ({ entityIdx: index("attachments_entity_idx").on(t.entityType, t.entityId) })
+  (t) => ({ entityIdx: index("attachments_entity_idx").on(t.entityType, t.entityId), commentIdx: index("attachments_comment_idx").on(t.commentId) })
 );
 
 export const comments = sqliteTable(

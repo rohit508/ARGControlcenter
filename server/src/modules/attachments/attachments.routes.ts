@@ -10,20 +10,26 @@ import { authenticate } from "../../middleware/auth.middleware";
 import { notFound, forbidden, unauthenticated } from "../../middleware/errorHandler.middleware";
 import { upload, UPLOAD_DIR } from "../../lib/upload";
 import { writeAudit } from "../../lib/audit";
-import { canManageAllTasks, isEmployeeTaskAssignee } from "../employee-tasks/employee-tasks.service";
+import { canManageAllTasks, isEmployeeTaskAssignee, authorizeAssignmentAccess, getAssignmentForAccessCheck } from "../employee-tasks/employee-tasks.service";
 
 const router = Router();
 router.use(authenticate);
 
-// Generic per the `attachments` table's design (entityType/entityId), but the only entity type
-// actually wired up by this feature is "employee-task" — extend this switch if another module
-// adopts attachments later.
+// Generic per the `attachments` table's design (entityType/entityId), but only two entity types
+// are wired up today — extend this switch if another module adopts attachments later.
 async function assertCanAccessEntity(req: Request, entityType: string, entityId: number) {
   if (!req.user) throw unauthenticated();
   if (entityType === "employee-task") {
     if (await canManageAllTasks(req.user)) return;
     if (await isEmployeeTaskAssignee(req.user, entityId)) return;
     throw forbidden();
+  }
+  if (entityType === "employee-task-assignment") {
+    // entityId here is an assignment id, not a task id — voice notes/files attached to a single
+    // ticket's discussion thread, scoped the same way that thread's comments already are.
+    const assignment = await getAssignmentForAccessCheck(entityId);
+    await authorizeAssignmentAccess(assignment, req.user);
+    return;
   }
   throw forbidden("Unsupported attachment entity type");
 }
@@ -46,6 +52,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const entityType = String(req.query.entityType || "");
     const entityId = Number(req.query.entityId);
+    const commentId = req.query.commentId ? Number(req.query.commentId) : null;
     if (!entityType || !entityId || !req.file) throw notFound("Attachment");
     await assertCanAccessEntity(req, entityType, entityId);
 
@@ -54,6 +61,7 @@ router.post(
       .values({
         entityType,
         entityId,
+        commentId,
         fileName: req.file.originalname,
         filePath: req.file.filename,
         mimeType: req.file.mimetype,

@@ -47,7 +47,7 @@ const roster: RosterRow[] = [
   { name: "Shiraan Ali", designation: "Sales & Marketing", roles: ["User"], dept: 1 },
   { name: "Asad Ali", designation: "Group Director", roles: ["Admin", "DepartmentHead"], dept: 0 },
   { name: "Muhammad Adeel", designation: "Manager Supply Chain", roles: ["User"], dept: 2 },
-  { name: "Let. Col Kashif Bashir (Ret)", designation: "Director IFC ISB", roles: ["User"], dept: 3 },
+  { name: "Kashif Bashir", designation: "Director IFC ISB", roles: ["User"], dept: 3 },
   { name: "Brig Nayyar Abbas Zaidi", designation: "Sale Support", roles: ["User"], dept: 1 },
   { name: "AVM Hussain", designation: "Sale Support", roles: ["User"], dept: 1 },
   { name: "Ibad Jabbar", designation: "Business Development", roles: ["User"], dept: 1 },

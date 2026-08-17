@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../services/apiClient";
-import { EmployeeTask, EmployeeTaskAssignment, EmployeeTaskComment, EmployeeTaskStats } from "../../types";
+import { Attachment, EmployeeTask, EmployeeTaskAssignment, EmployeeTaskComment, EmployeeTaskStats } from "../../types";
 
 // Real-time is polling-based in this app (no WebSocket/SSE infra exists) — a ~15s refetch plus
 // immediate invalidation right after any mutation keeps the board and dashboard current without
@@ -98,5 +98,15 @@ export function useAddComment() {
     mutationFn: ({ assignmentId, body }: { assignmentId: number; body: string }) =>
       api.post<{ data: EmployeeTaskComment }>(`/employee-tasks/assignments/${assignmentId}/comments`, { body }),
     onSuccess: (_res, vars) => queryClient.invalidateQueries({ queryKey: ["employee-tasks", "comments", vars.assignmentId] }),
+  });
+}
+
+// Attachments (currently: voice notes) tied to a ticket's discussion thread — entityType
+// "employee-task-assignment" mirrors how comments are already scoped to a single assignment.
+export function useAssignmentAttachments(assignmentId: number | null) {
+  return useQuery({
+    queryKey: ["employee-tasks", "attachments", assignmentId],
+    queryFn: () => api.get<{ data: Attachment[] }>(`/attachments?entityType=employee-task-assignment&entityId=${assignmentId}`),
+    enabled: assignmentId !== null,
   });
 }

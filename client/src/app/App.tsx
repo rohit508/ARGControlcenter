@@ -3,6 +3,7 @@ import { Suspense, lazy } from "react";
 import AppShell from "./AppShell";
 import AuthGuard from "./AuthGuard";
 import PermissionGuard from "./PermissionGuard";
+import AdminOnly from "./AdminOnly";
 import LoginPage from "../modules/LoginPage";
 import HealthBadge from "../components/data-table/HealthBadge";
 
@@ -27,6 +28,7 @@ const HelpDeskPage = lazy(() => import("../modules/helpdesk/HelpDeskPage"));
 const AnalyticsPage = lazy(() => import("../modules/analytics/AnalyticsPage"));
 const EmployeeTasksBoardPage = lazy(() => import("../modules/employee-tasks/EmployeeTasksBoardPage"));
 const MyTasksPage = lazy(() => import("../modules/employee-tasks/MyTasksPage"));
+const TicketDetailPage = lazy(() => import("../modules/employee-tasks/TicketDetailPage"));
 const TaskAnalyticsPage = lazy(() => import("../modules/dashboard/TaskAnalyticsPage"));
 const EmployeesPage = lazy(() => import("../modules/employees/EmployeesPage"));
 const RbacAdminPage = lazy(() => import("../modules/admin/RbacAdminPage"));
@@ -53,7 +55,14 @@ export default function App() {
           <Route path="/change-requests" element={<ChangeRequestsPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/admin/configuration" element={<AdminConfigPage />} />
+          <Route
+            path="/admin/configuration"
+            element={
+              <AdminOnly>
+                <AdminConfigPage />
+              </AdminOnly>
+            }
+          />
           <Route path="/action-items" element={<ActionItemsPage />} />
           <Route path="/finance" element={<FinancePage />} />
           <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
@@ -71,6 +80,7 @@ export default function App() {
             }
           />
           <Route path="/my-tasks" element={<MyTasksPage />} />
+          <Route path="/my-tasks/:assignmentId" element={<TicketDetailPage />} />
           <Route path="/task-analytics" element={<TaskAnalyticsPage />} />
           <Route
             path="/employees"

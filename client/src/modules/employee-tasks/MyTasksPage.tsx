@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { PriorityBadge, StatusBadge } from "../../components/ui/Badge";
 import { useEmployeeTasks } from "./useEmployeeTasks";
-import StatusUpdateModal from "./StatusUpdateModal";
 import { EmployeeTask, EmployeeTaskAssignment } from "../../types";
 import { formatDueDateTime } from "../../utils/formatDateTime";
 
@@ -26,8 +26,8 @@ const STATUS_META: Record<TaskStatus, { icon: string; activeBg: string; activeTe
 
 export default function MyTasksPage() {
   const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
   const { data, isLoading } = useEmployeeTasks();
-  const [selected, setSelected] = useState<TaskRow | null>(null);
   const [activeTab, setActiveTab] = useState<TaskStatus>("Pending");
 
   const { myRows, statusCounts } = useMemo(() => {
@@ -133,7 +133,7 @@ export default function MyTasksPage() {
                 return (
                   <button
                     key={assignment.id}
-                    onClick={() => setSelected({ task, assignment })}
+                    onClick={() => navigate(`/my-tasks/${assignment.id}`)}
                     className="relative text-left overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 pl-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                   >
                     <span className={`absolute inset-y-0 left-0 w-1.5 ${meta.cardBar}`} aria-hidden />
@@ -170,13 +170,6 @@ export default function MyTasksPage() {
           )}
         </>
       )}
-
-      <StatusUpdateModal
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        task={selected?.task ?? null}
-        assignment={selected?.assignment ?? null}
-      />
     </div>
   );
 }

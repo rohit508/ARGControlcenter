@@ -46,7 +46,9 @@ export const updateAssignmentStatusSchema = z
     }
   });
 
-export const addCommentSchema = z.object({ body: z.string().min(1) });
+// body may be empty for a voice-note-only comment — the audio attachment carries the content in
+// that case, uploaded as a follow-up request once this comment row (and its id) exists.
+export const addCommentSchema = z.object({ body: z.string().default("") });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

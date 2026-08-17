@@ -71,7 +71,7 @@ export default function TaskAnalyticsPage() {
         <div className="absolute right-16 bottom-0 w-20 h-20 rounded-full bg-white/10" aria-hidden />
         <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Task Analytics</h1>
+            <h1 className="text-3xl font-bold text-white">Task Board</h1>
             <p className="mt-1 text-sm text-white/80">
               Fresh insights, now filtered by employee.
             </p>

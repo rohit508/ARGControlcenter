@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DataTable from "../../components/data-table/DataTable";
 import { PriorityBadge, StatusBadge } from "../../components/ui/Badge";
 import ProgressBar from "../../components/ui/ProgressBar";
@@ -16,6 +17,7 @@ type SortKey = "dueDate" | "priority" | "completionPct" | "title";
 const PRIORITY_ORDER: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 
 export default function EmployeeTasksBoardPage() {
+  const navigate = useNavigate();
   const { can } = usePermissions();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
@@ -174,6 +176,16 @@ export default function EmployeeTasksBoardPage() {
                       <div>Completed Time: {formatDateTime(a.completedAt)}</div>
                       <div>Total: {a.durationMs !== null ? `${Math.floor(a.durationMs / 3600000)}h ${Math.round((a.durationMs % 3600000) / 60000)}m` : "—"}</div>
                     </div>
+                    <button
+                      onClick={() => navigate(`/my-tasks/${a.id}`)}
+                      title="View Ticket"
+                      className="mt-2 w-7 h-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -184,15 +196,32 @@ export default function EmployeeTasksBoardPage() {
             key: "actions",
             header: "",
             render: (r) => (
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 {canUpdate && (
-                  <button onClick={() => openEdit(r)} className="text-xs px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800">
-                    Edit
+                  <button
+                    onClick={() => openEdit(r)}
+                    title="Edit"
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      <path d="M15 5l4 4" />
+                    </svg>
                   </button>
                 )}
                 {canDelete && (
-                  <button onClick={() => setDeletingTask(r)} className="text-xs px-2 py-1 rounded-md border border-danger-500 text-danger-500 hover:bg-danger-100">
-                    Delete
+                  <button
+                    onClick={() => setDeletingTask(r)}
+                    title="Delete"
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md text-danger-500 hover:bg-danger-100 dark:hover:bg-danger-950"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                    </svg>
                   </button>
                 )}
               </div>

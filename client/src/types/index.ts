@@ -175,6 +175,7 @@ export interface Attachment {
   id: number;
   entityType: string;
   entityId: number;
+  commentId: number | null;
   fileName: string;
   filePath: string;
   mimeType: string;

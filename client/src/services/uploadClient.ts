@@ -31,16 +31,23 @@ export async function uploadFile(path: string, file: File): Promise<{ data: unkn
 // The download route requires a Bearer header, which a plain <a href> can't send — fetch the
 // file as a blob instead and trigger the save via a throwaway object URL.
 export async function downloadAttachment(attachmentId: number, fileName: string): Promise<void> {
-  const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`${BASE}/attachments/${attachmentId}/download`, {
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-  });
-  if (!res.ok) throw new ApiClientError(res.status, "DOWNLOAD_FAILED", "Could not download the file");
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
+  const url = await fetchAttachmentBlobUrl(attachmentId);
   const a = document.createElement("a");
   a.href = url;
   a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// Same auth-header problem as downloadAttachment, but for inline playback (<audio src=...>)
+// instead of a forced save — caller owns the returned object URL and must revoke it when done
+// (e.g. on unmount) to avoid leaking memory across a long-lived comment thread.
+export async function fetchAttachmentBlobUrl(attachmentId: number): Promise<string> {
+  const { accessToken } = useAuthStore.getState();
+  const res = await fetch(`${BASE}/attachments/${attachmentId}/download`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
+  if (!res.ok) throw new ApiClientError(res.status, "DOWNLOAD_FAILED", "Could not load the attachment");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
