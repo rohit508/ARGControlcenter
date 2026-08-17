@@ -1,7 +1,15 @@
-# better-sqlite3 has no postinstall download step in this version — a plain `npm install`
-# compiles it from source via node-gyp, which needs Python + a C++ toolchain. Nixpacks' default
-# Node image doesn't include Python, so without this, node-gyp fails outright (the earlier
-# --ignore-scripts workaround avoided that failure but skipped the compile entirely, leaving a
-# missing/mismatched binary that segfaults at runtime instead).
+# Two things this build environment needs beyond Nixpacks' auto-detected defaults:
+#
+# 1. better-sqlite3@13 requires Node >=22 (its prebuilt/compiled binary's ABI doesn't match
+#    Node 18's) — Nixpacks was defaulting to Node 18, and the resulting binary segfaulted on
+#    every single invocation (confirmed directly: even a bare `require` through drizzle crashed,
+#    not just the drizzle-kit CLI). NIXPACKS_NODE_VERSION overrides the auto-detected provider
+#    version without duplicating/conflicting with it the way adding "nodejs_22" to nixPkgs would.
+# 2. better-sqlite3 has no postinstall download step in this version — a plain `npm install`
+#    compiles it from source via node-gyp, which needs Python + a C++ toolchain. Nixpacks'
+#    default image doesn't include Python, so without this, node-gyp fails outright.
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
 [phases.setup]
 nixPkgs = ["...", "python3", "gcc", "gnumake"]
