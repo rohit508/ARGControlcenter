@@ -442,4 +442,379 @@ CREATE TABLE `tasks` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `tasks_task_code_unique` ON `tasks` (`task_code`);--> statement-breakpoint
 CREATE INDEX `tasks_project_idx` ON `tasks` (`project_id`);--> statement-breakpoint
-CREATE INDEX `tasks_assignee_idx` ON `tasks` (`assigned_to`);
+CREATE INDEX `tasks_assignee_idx` ON `tasks` (`assigned_to`);--> statement-breakpoint
+CREATE TABLE `attendance_records` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`employee_id` integer NOT NULL,
+	`date` text NOT NULL,
+	`status` text DEFAULT 'Present' NOT NULL,
+	`check_in` text,
+	`check_out` text,
+	FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `attendance_uq` ON `attendance_records` (`employee_id`,`date`);--> statement-breakpoint
+CREATE TABLE `chart_of_accounts` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`account_code` text NOT NULL,
+	`name` text NOT NULL,
+	`type` text NOT NULL,
+	`parent_account_id` integer,
+	`is_active` integer DEFAULT true NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `chart_of_accounts_account_code_unique` ON `chart_of_accounts` (`account_code`);--> statement-breakpoint
+CREATE TABLE `contacts` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`customer_id` integer,
+	`full_name` text NOT NULL,
+	`email` text,
+	`phone` text,
+	`job_title` text,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `contacts_customer_idx` ON `contacts` (`customer_id`);--> statement-breakpoint
+CREATE TABLE `customers` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`customer_code` text NOT NULL,
+	`name` text NOT NULL,
+	`industry` text,
+	`website` text,
+	`account_owner_id` integer,
+	`status` text DEFAULT 'Active' NOT NULL,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`account_owner_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `customers_customer_code_unique` ON `customers` (`customer_code`);--> statement-breakpoint
+CREATE INDEX `customers_owner_idx` ON `customers` (`account_owner_id`);--> statement-breakpoint
+CREATE TABLE `journal_entries` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`entry_code` text NOT NULL,
+	`entry_date` text NOT NULL,
+	`memo` text,
+	`project_id` integer,
+	`posted_by` integer,
+	`status` text DEFAULT 'Posted' NOT NULL,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`posted_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `journal_entries_entry_code_unique` ON `journal_entries` (`entry_code`);--> statement-breakpoint
+CREATE INDEX `journal_entries_date_idx` ON `journal_entries` (`entry_date`);--> statement-breakpoint
+CREATE TABLE `journal_lines` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`journal_entry_id` integer NOT NULL,
+	`account_id` integer NOT NULL,
+	`debit` real DEFAULT 0 NOT NULL,
+	`credit` real DEFAULT 0 NOT NULL,
+	`description` text,
+	FOREIGN KEY (`journal_entry_id`) REFERENCES `journal_entries`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`account_id`) REFERENCES `chart_of_accounts`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `journal_lines_entry_idx` ON `journal_lines` (`journal_entry_id`);--> statement-breakpoint
+CREATE INDEX `journal_lines_account_idx` ON `journal_lines` (`account_id`);--> statement-breakpoint
+CREATE TABLE `leads` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`lead_code` text NOT NULL,
+	`company_name` text NOT NULL,
+	`contact_name` text,
+	`email` text,
+	`phone` text,
+	`source` text,
+	`status` text DEFAULT 'New' NOT NULL,
+	`owner_id` integer,
+	`converted_customer_id` integer,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`owner_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`converted_customer_id`) REFERENCES `customers`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `leads_lead_code_unique` ON `leads` (`lead_code`);--> statement-breakpoint
+CREATE INDEX `leads_owner_idx` ON `leads` (`owner_id`);--> statement-breakpoint
+CREATE TABLE `leave_requests` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`leave_code` text NOT NULL,
+	`employee_id` integer NOT NULL,
+	`leave_type` text NOT NULL,
+	`start_date` text NOT NULL,
+	`end_date` text NOT NULL,
+	`status` text DEFAULT 'Pending' NOT NULL,
+	`approved_by` integer,
+	`reason` text,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`approved_by`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `leave_requests_leave_code_unique` ON `leave_requests` (`leave_code`);--> statement-breakpoint
+CREATE INDEX `leave_employee_idx` ON `leave_requests` (`employee_id`);--> statement-breakpoint
+CREATE TABLE `opportunities` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`opportunity_code` text NOT NULL,
+	`customer_id` integer,
+	`name` text NOT NULL,
+	`stage` text DEFAULT 'Qualification' NOT NULL,
+	`amount` real DEFAULT 0 NOT NULL,
+	`probability` integer DEFAULT 20 NOT NULL,
+	`expected_close_date` text,
+	`owner_id` integer,
+	`linked_project_id` integer,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`owner_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`linked_project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `opportunities_opportunity_code_unique` ON `opportunities` (`opportunity_code`);--> statement-breakpoint
+CREATE INDEX `opportunities_customer_idx` ON `opportunities` (`customer_id`);--> statement-breakpoint
+CREATE INDEX `opportunities_owner_idx` ON `opportunities` (`owner_id`);--> statement-breakpoint
+CREATE TABLE `po_lines` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`purchase_order_id` integer NOT NULL,
+	`description` text NOT NULL,
+	`quantity` real DEFAULT 1 NOT NULL,
+	`unit_price` real DEFAULT 0 NOT NULL,
+	`line_total` real DEFAULT 0 NOT NULL,
+	FOREIGN KEY (`purchase_order_id`) REFERENCES `purchase_orders`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `purchase_orders` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`po_number` text NOT NULL,
+	`vendor_id` integer NOT NULL,
+	`project_id` integer,
+	`status` text DEFAULT 'Draft' NOT NULL,
+	`total_amount` real DEFAULT 0 NOT NULL,
+	`order_date` text NOT NULL,
+	`expected_date` text,
+	`workflow_instance_id` integer,
+	`requested_by` integer,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`vendor_id`) REFERENCES `vendors`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`requested_by`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `purchase_orders_po_number_unique` ON `purchase_orders` (`po_number`);--> statement-breakpoint
+CREATE INDEX `po_vendor_idx` ON `purchase_orders` (`vendor_id`);--> statement-breakpoint
+CREATE INDEX `po_project_idx` ON `purchase_orders` (`project_id`);--> statement-breakpoint
+CREATE TABLE `vendors` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`vendor_code` text NOT NULL,
+	`name` text NOT NULL,
+	`category` text,
+	`contact_email` text,
+	`contact_phone` text,
+	`status` text DEFAULT 'Active' NOT NULL,
+	`rating` real,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `vendors_vendor_code_unique` ON `vendors` (`vendor_code`);--> statement-breakpoint
+CREATE TABLE `assets` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`asset_code` text NOT NULL,
+	`name` text NOT NULL,
+	`category` text,
+	`purchase_date` text NOT NULL,
+	`purchase_cost` real NOT NULL,
+	`useful_life_years` real DEFAULT 5 NOT NULL,
+	`salvage_value` real DEFAULT 0 NOT NULL,
+	`location` text,
+	`assigned_to` integer,
+	`project_id` integer,
+	`status` text DEFAULT 'Active' NOT NULL,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`assigned_to`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `assets_asset_code_unique` ON `assets` (`asset_code`);--> statement-breakpoint
+CREATE INDEX `assets_assigned_idx` ON `assets` (`assigned_to`);--> statement-breakpoint
+CREATE TABLE `bom_lines` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`bom_id` integer NOT NULL,
+	`component_item_id` integer NOT NULL,
+	`quantity_per_output` real NOT NULL,
+	FOREIGN KEY (`bom_id`) REFERENCES `boms`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`component_item_id`) REFERENCES `stock_items`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `boms` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`bom_code` text NOT NULL,
+	`output_item_id` integer NOT NULL,
+	`output_quantity` real DEFAULT 1 NOT NULL,
+	`is_active` integer DEFAULT true NOT NULL,
+	FOREIGN KEY (`output_item_id`) REFERENCES `stock_items`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `boms_bom_code_unique` ON `boms` (`bom_code`);--> statement-breakpoint
+CREATE TABLE `kb_articles` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`title` text NOT NULL,
+	`body` text NOT NULL,
+	`category` text,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `maintenance_logs` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`asset_id` integer NOT NULL,
+	`scheduled_date` text NOT NULL,
+	`completed_date` text,
+	`type` text DEFAULT 'Preventive' NOT NULL,
+	`cost` real DEFAULT 0 NOT NULL,
+	`notes` text,
+	`status` text DEFAULT 'Scheduled' NOT NULL,
+	FOREIGN KEY (`asset_id`) REFERENCES `assets`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `maintenance_asset_idx` ON `maintenance_logs` (`asset_id`);--> statement-breakpoint
+CREATE TABLE `production_orders` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`order_code` text NOT NULL,
+	`bom_id` integer NOT NULL,
+	`quantity_planned` real NOT NULL,
+	`quantity_completed` real DEFAULT 0 NOT NULL,
+	`warehouse_id` integer NOT NULL,
+	`work_center_id` integer,
+	`status` text DEFAULT 'Planned' NOT NULL,
+	`scheduled_start` text,
+	`scheduled_end` text,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`bom_id`) REFERENCES `boms`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`work_center_id`) REFERENCES `work_centers`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `production_orders_order_code_unique` ON `production_orders` (`order_code`);--> statement-breakpoint
+CREATE INDEX `po_mfg_bom_idx` ON `production_orders` (`bom_id`);--> statement-breakpoint
+CREATE TABLE `stock_items` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`sku` text NOT NULL,
+	`name` text NOT NULL,
+	`category` text,
+	`unit_of_measure` text DEFAULT 'ea' NOT NULL,
+	`reorder_point` real DEFAULT 0 NOT NULL,
+	`standard_cost` real DEFAULT 0 NOT NULL,
+	`is_active` integer DEFAULT true NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `stock_items_sku_unique` ON `stock_items` (`sku`);--> statement-breakpoint
+CREATE TABLE `stock_levels` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`stock_item_id` integer NOT NULL,
+	`warehouse_id` integer NOT NULL,
+	`quantity_on_hand` real DEFAULT 0 NOT NULL,
+	FOREIGN KEY (`stock_item_id`) REFERENCES `stock_items`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `stock_levels_uq` ON `stock_levels` (`stock_item_id`,`warehouse_id`);--> statement-breakpoint
+CREATE TABLE `stock_transactions` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`stock_item_id` integer NOT NULL,
+	`warehouse_id` integer NOT NULL,
+	`type` text NOT NULL,
+	`quantity` real NOT NULL,
+	`reference` text,
+	`performed_by` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`stock_item_id`) REFERENCES `stock_items`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`performed_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `stock_txn_item_idx` ON `stock_transactions` (`stock_item_id`,`warehouse_id`);--> statement-breakpoint
+CREATE TABLE `tickets` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`ticket_code` text NOT NULL,
+	`subject` text NOT NULL,
+	`description` text,
+	`customer_id` integer,
+	`raised_by` integer,
+	`assigned_to` integer,
+	`priority` text DEFAULT 'Medium' NOT NULL,
+	`status` text DEFAULT 'Open' NOT NULL,
+	`sla_hours` integer DEFAULT 48 NOT NULL,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`resolved_at` integer,
+	FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`raised_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`assigned_to`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `tickets_ticket_code_unique` ON `tickets` (`ticket_code`);--> statement-breakpoint
+CREATE INDEX `tickets_status_idx` ON `tickets` (`status`);--> statement-breakpoint
+CREATE INDEX `tickets_assigned_idx` ON `tickets` (`assigned_to`);--> statement-breakpoint
+CREATE TABLE `warehouses` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`code` text NOT NULL,
+	`name` text NOT NULL,
+	`location` text,
+	`is_active` integer DEFAULT true NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `warehouses_code_unique` ON `warehouses` (`code`);--> statement-breakpoint
+CREATE TABLE `work_centers` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`code` text NOT NULL,
+	`name` text NOT NULL,
+	`capacity_hours_per_day` real DEFAULT 8 NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `work_centers_code_unique` ON `work_centers` (`code`);--> statement-breakpoint
+CREATE TABLE `employee_task_assignments` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`task_id` integer NOT NULL,
+	`employee_id` integer NOT NULL,
+	`status` text DEFAULT 'Pending' NOT NULL,
+	`not_done_reason` text,
+	`progress_notes` text,
+	`started_at` integer,
+	`completed_at` integer,
+	`duration_ms` integer,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`task_id`) REFERENCES `employee_tasks`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `employee_task_assignments_uq` ON `employee_task_assignments` (`task_id`,`employee_id`);--> statement-breakpoint
+CREATE INDEX `employee_task_assignments_employee_idx` ON `employee_task_assignments` (`employee_id`);--> statement-breakpoint
+CREATE INDEX `employee_task_assignments_task_idx` ON `employee_task_assignments` (`task_id`);--> statement-breakpoint
+CREATE TABLE `employee_tasks` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`task_code` text NOT NULL,
+	`title` text NOT NULL,
+	`description` text,
+	`priority` text DEFAULT 'Medium' NOT NULL,
+	`due_date` text,
+	`due_time` text,
+	`department_id` integer,
+	`created_by` integer NOT NULL,
+	`deleted_at` integer,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`department_id`) REFERENCES `departments`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `employee_tasks_task_code_unique` ON `employee_tasks` (`task_code`);--> statement-breakpoint
+CREATE INDEX `employee_tasks_due_date_idx` ON `employee_tasks` (`due_date`);

@@ -40,7 +40,7 @@ jobs:
 
       - name: Migrate + seed (smoke test that the demo data path still works)
         run: |
-          npm run db:push
+          npm run db:migrate
           npm run seed
 
       - name: Build
