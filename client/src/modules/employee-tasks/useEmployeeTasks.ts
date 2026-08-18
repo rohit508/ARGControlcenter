@@ -37,11 +37,12 @@ export function useEmployeeTasks(employeeId?: number, departmentId?: number) {
   });
 }
 
-export function useMyTeam() {
+export function useMyTeam(enabled: boolean = true) {
   return useQuery({
     queryKey: ["employee-tasks", "my-team"],
     queryFn: () => api.get<{ data: MyTeam }>("/employee-tasks/my-team"),
     refetchInterval: POLL_MS,
+    enabled,
   });
 }
 

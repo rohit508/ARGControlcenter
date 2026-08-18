@@ -16,7 +16,7 @@ import {
   Line,
 } from "recharts";
 import StatTile from "./StatTile";
-import { useEmployeeTaskStats } from "../employee-tasks/useEmployeeTasks";
+import { useEmployeeTaskStats, useMyTeam } from "../employee-tasks/useEmployeeTasks";
 import { useEmployees } from "../employees/useEmployees";
 import { useAuthStore } from "../../store/authStore";
 
@@ -35,15 +35,23 @@ export default function TaskAnalyticsPage() {
   // The employee filter lets you view someone else's stats — the backend already ignores this
   // param for a plain "User" (see getStats in employee-tasks.service.ts, which forces the
   // caller's own employeeId), so hiding it here just keeps the UI honest about what's possible.
-  const canFilterByEmployee = user?.roles.some((r) => r === "Admin" || r === "CEO") ?? false;
+  // DepartmentHead can filter too, but only within their own team — getStats() enforces that
+  // server-side, same as listTasks/getTask/getMyTeam.
+  const isAdminOrCeo = user?.roles.some((r) => r === "Admin" || r === "CEO") ?? false;
+  const isDepartmentHead = user?.roles.includes("DepartmentHead") ?? false;
+  const canFilterByEmployee = isAdminOrCeo || isDepartmentHead;
 
-  // Only Admin/CEO ever need the full employee list for the filter dropdown.
-  const { data: employeesQuery, isLoading: employeesLoading } = useEmployees({}, { enabled: canFilterByEmployee });
+  // Admin/CEO get the full roster; DepartmentHead gets only their own team.
+  const { data: employeesQuery, isLoading: employeesLoading } = useEmployees({}, { enabled: isAdminOrCeo });
+  const { data: myTeamQuery, isLoading: myTeamLoading } = useMyTeam(isDepartmentHead);
+  const filterOptions = isAdminOrCeo
+    ? employeesQuery?.data ?? []
+    : (myTeamQuery?.data.members ?? []).map((m) => ({ id: m.id, fullName: m.fullName }));
   const { data, isLoading, error } = useEmployeeTaskStats(
     canFilterByEmployee && selectedEmployeeId ? Number(selectedEmployeeId) : undefined
   );
 
-  const loading = isLoading || (canFilterByEmployee && employeesLoading);
+  const loading = isLoading || (isAdminOrCeo && employeesLoading) || (isDepartmentHead && myTeamLoading);
   if (loading) return <div className="text-slate-400">Loading…</div>;
   if (error)
     return (
@@ -88,7 +96,7 @@ export default function TaskAnalyticsPage() {
                 onChange={(e) => setSelectedEmployeeId(e.target.value)}
               >
                 <option value="">All Employees</option>
-                {employeesQuery?.data.map((employee) => (
+                {filterOptions.map((employee) => (
                   <option key={employee.id} value={employee.id}>
                     {employee.fullName}
                   </option>

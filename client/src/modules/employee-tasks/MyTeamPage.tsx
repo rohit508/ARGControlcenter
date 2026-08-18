@@ -90,15 +90,29 @@ function MyTeamContent() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">
           {selectedEmployeeId ? `Tickets — ${members.find((m) => m.id === selectedEmployeeId)?.fullName}` : "All Team Tickets"}
         </h2>
-        {selectedEmployeeId && (
-          <button onClick={() => setSelectedEmployeeId(null)} className="text-xs text-brand-600 hover:underline">
-            Clear filter
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <select
+            className="rounded-md border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-sm"
+            value={selectedEmployeeId ?? ""}
+            onChange={(e) => setSelectedEmployeeId(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">All Employees</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.fullName}
+              </option>
+            ))}
+          </select>
+          {selectedEmployeeId && (
+            <button onClick={() => setSelectedEmployeeId(null)} className="text-xs text-brand-600 hover:underline">
+              Clear filter
+            </button>
+          )}
+        </div>
       </div>
 
       {tasksLoading ? (
