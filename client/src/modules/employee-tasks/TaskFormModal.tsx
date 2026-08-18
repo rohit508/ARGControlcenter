@@ -4,8 +4,9 @@ import MicButton from "../../components/ui/MicButton";
 import { ApiClientError } from "../../services/apiClient";
 import { uploadFile } from "../../services/uploadClient";
 import { useEmployees, useDepartments } from "../employees/useEmployees";
-import { useCreateEmployeeTask, useUpdateEmployeeTask } from "./useEmployeeTasks";
+import { useCreateEmployeeTask, useUpdateEmployeeTask, useMyTeam } from "./useEmployeeTasks";
 import { useSpeechToText } from "../../hooks/useSpeechToText";
+import { useAuthStore } from "../../store/authStore";
 import { EmployeeTask } from "../../types";
 
 const PRIORITIES = ["Critical", "High", "Medium", "Low"];
@@ -17,7 +18,17 @@ interface Props {
 }
 
 export default function TaskFormModal({ open, onClose, task }: Props) {
-  const { data: employeesData } = useEmployees();
+  const user = useAuthStore((s) => s.user);
+  const isDepartmentHead = user?.roles.includes("DepartmentHead") ?? false;
+  // A DepartmentHead may only assign within their own team — the server also enforces this (see
+  // assertAssigneesWithinDepartment in employee-tasks.service.ts), this just keeps the picker
+  // from offering choices that would be rejected. Everyone else keeps seeing the full roster,
+  // unchanged from before.
+  const { data: employeesDataAll } = useEmployees(undefined, { enabled: !isDepartmentHead });
+  const { data: myTeamData } = useMyTeam();
+  const employeesData = isDepartmentHead
+    ? { data: (myTeamData?.data.members ?? []).map((m) => ({ id: m.id, fullName: m.fullName, roleTitle: m.roleTitle })) }
+    : employeesDataAll;
   const { data: deptData } = useDepartments();
   const createTask = useCreateEmployeeTask();
   const updateTask = useUpdateEmployeeTask();
@@ -61,12 +72,20 @@ export default function TaskFormModal({ open, onClose, task }: Props) {
       const now = new Date();
       setDueTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
     }
-    setDepartmentId(task?.departmentId ? String(task.departmentId) : "");
+    // DepartmentHead always raises tickets under their own department — locked, not just
+    // defaulted, since assignees are already restricted to that department (see
+    // assertAssigneesWithinDepartment server-side); letting the field diverge would be confusing.
+    // Editing an existing task keeps showing whatever was actually saved.
+    if (!task && isDepartmentHead && myTeamData?.data.departmentId) {
+      setDepartmentId(String(myTeamData.data.departmentId));
+    } else {
+      setDepartmentId(task?.departmentId ? String(task.departmentId) : "");
+    }
     setAssigneeIds(task?.assignments.map((a) => a.employeeId) ?? []);
     setAssigneeSearch("");
     setFiles([]);
     setError(null);
-  }, [open, task]);
+  }, [open, task, isDepartmentHead, myTeamData]);
 
   function toggleAssignee(id: number) {
     setAssigneeIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -208,18 +227,26 @@ export default function TaskFormModal({ open, onClose, task }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Department</label>
-            <select
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
-              value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-            >
-              <option value="">—</option>
-              {deptData?.data.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            {isDepartmentHead ? (
+              // Locked to the DepartmentHead's own department — matches the assignee picker,
+              // which is already restricted to that same department's team members.
+              <div className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
+                {myTeamData?.data.departmentName ?? "—"}
+              </div>
+            ) : (
+              <select
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+              >
+                <option value="">—</option>
+                {deptData?.data.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-200">Due Date</label>

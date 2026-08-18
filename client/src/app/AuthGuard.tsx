@@ -7,9 +7,12 @@ import { ReactNode } from "react";
 // (not just hiding the nav link) is what makes the restriction real rather than cosmetic.
 // "/my-tasks" also covers its ticket-detail child route ("/my-tasks/:assignmentId").
 const USER_ALLOWED_PATHS = ["/my-tasks", "/task-analytics"];
+// DepartmentHead (without Admin) gets the same restriction plus "/my-team" — must match
+// AppShell's USER_ALLOWED_PATHS for this role combination.
+const DEPARTMENT_HEAD_ALLOWED_PATHS = ["/my-team", "/my-tasks", "/task-analytics"];
 
-function isUserAllowedPath(pathname: string): boolean {
-  return USER_ALLOWED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+function isAllowedPath(pathname: string, allowedPaths: string[]): boolean {
+  return allowedPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 // Admin-only screens — blocked here (not just PermissionGuard) so a role that is neither Admin
@@ -24,13 +27,16 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.roles.includes("Admin") ?? false;
   const isPlainUser = !isAdmin && user?.roles.length === 1 && user.roles[0] === "User";
+  const isDepartmentHeadOnly = !isAdmin && (user?.roles.includes("DepartmentHead") ?? false);
+  const isRestrictedNavUser = isPlainUser || isDepartmentHeadOnly;
+  const restrictedAllowedPaths = isDepartmentHeadOnly ? DEPARTMENT_HEAD_ALLOWED_PATHS : USER_ALLOWED_PATHS;
 
-  if (isPlainUser && !isUserAllowedPath(location.pathname)) {
+  if (isRestrictedNavUser && !isAllowedPath(location.pathname, restrictedAllowedPaths)) {
     return <Navigate to="/task-analytics" replace />;
   }
 
   if (!isAdmin && ADMIN_ONLY_PATHS.includes(location.pathname)) {
-    return <Navigate to={isPlainUser ? "/task-analytics" : "/"} replace />;
+    return <Navigate to={isRestrictedNavUser ? "/task-analytics" : "/"} replace />;
   }
 
   // Admin lands on Task Analytics after login — the dashboard root is not part of Admin's

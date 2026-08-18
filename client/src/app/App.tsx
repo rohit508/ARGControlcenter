@@ -27,6 +27,7 @@ const AssetsPage = lazy(() => import("../modules/assets/AssetsPage"));
 const HelpDeskPage = lazy(() => import("../modules/helpdesk/HelpDeskPage"));
 const AnalyticsPage = lazy(() => import("../modules/analytics/AnalyticsPage"));
 const EmployeeTasksBoardPage = lazy(() => import("../modules/employee-tasks/EmployeeTasksBoardPage"));
+const MyTeamPage = lazy(() => import("../modules/employee-tasks/MyTeamPage"));
 const MyTasksPage = lazy(() => import("../modules/employee-tasks/MyTasksPage"));
 const TicketDetailPage = lazy(() => import("../modules/employee-tasks/TicketDetailPage"));
 const TaskAnalyticsPage = lazy(() => import("../modules/dashboard/TaskAnalyticsPage"));
@@ -79,6 +80,7 @@ export default function App() {
               </PermissionGuard>
             }
           />
+          <Route path="/my-team" element={<MyTeamPage />} />
           <Route path="/my-tasks" element={<MyTasksPage />} />
           <Route path="/my-tasks/:assignmentId" element={<TicketDetailPage />} />
           <Route path="/task-analytics" element={<TaskAnalyticsPage />} />

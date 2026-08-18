@@ -62,7 +62,7 @@ export default function LoginPage() {
         >
           {loading ? "Signing in…" : "Sign in"}
         </button>
-        <div className="text-xs text-slate-400 mt-4 text-center">Demo: admin@erp.local / Passw0rd!</div>
+        <div className="text-xs text-slate-400 mt-4 text-center"></div>
       </form>
     </div>
   );

@@ -171,6 +171,20 @@ export interface Employee {
   updatedAt: string;
 }
 
+export interface MyTeamMember {
+  id: number;
+  fullName: string;
+  roleTitle: string | null;
+  email: string | null;
+  statusCounts: Record<EmployeeTaskStatus, number>;
+}
+
+export interface MyTeam {
+  departmentId: number | null;
+  departmentName: string | null;
+  members: MyTeamMember[];
+}
+
 export interface Attachment {
   id: number;
   entityType: string;

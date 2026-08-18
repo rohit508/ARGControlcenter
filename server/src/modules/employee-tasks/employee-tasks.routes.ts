@@ -3,7 +3,7 @@ import * as service from "./employee-tasks.service";
 import { createTaskSchema, updateTaskSchema, updateAssignmentStatusSchema, addCommentSchema } from "./employee-tasks.schema";
 import { asyncHandler } from "../../middleware/errorHandler.middleware";
 import { authenticate } from "../../middleware/auth.middleware";
-import { requirePermission } from "../../middleware/rbac.middleware";
+import { requirePermission, requireRole } from "../../middleware/rbac.middleware";
 
 const router = Router();
 router.use(authenticate);
@@ -19,7 +19,15 @@ router.get(
 );
 
 // Registered before "/:id" — a literal path must come before a param path, or Express would
-// treat "stats" as an :id value (same rule crudFactory's extraRoutes hook documents).
+// treat "my-team"/"stats" as an :id value (same rule crudFactory's extraRoutes hook documents).
+router.get(
+  "/my-team",
+  requireRole("DepartmentHead"),
+  asyncHandler(async (req, res) => {
+    res.json({ data: await service.getMyTeam(req.user!) });
+  })
+);
+
 router.get(
   "/stats",
   asyncHandler(async (req, res) => {
@@ -40,7 +48,7 @@ router.post(
   requirePermission("employee-tasks", "create"),
   asyncHandler(async (req, res) => {
     const input = createTaskSchema.parse(req.body);
-    const task = await service.createTask(input, req.user!.userId);
+    const task = await service.createTask(input, req.user!);
     res.status(201).json({ data: task });
   })
 );
@@ -50,7 +58,7 @@ router.patch(
   requirePermission("employee-tasks", "update"),
   asyncHandler(async (req, res) => {
     const input = updateTaskSchema.parse(req.body);
-    const task = await service.updateTask(Number(req.params.id), input, req.user!.userId);
+    const task = await service.updateTask(Number(req.params.id), input, req.user!);
     res.json({ data: task });
   })
 );

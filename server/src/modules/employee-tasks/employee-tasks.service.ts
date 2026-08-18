@@ -1,6 +1,6 @@
 import { db } from "../../db/client";
 import { employeeTasks, employeeTaskAssignments, employees, users, comments, notifications, departments } from "../../db/schema";
-import { eq, and, isNull, inArray } from "drizzle-orm";
+import { eq, and, isNull, inArray, SQL } from "drizzle-orm";
 import { notFound, forbidden } from "../../middleware/errorHandler.middleware";
 import { writeAudit } from "../../lib/audit";
 import { nextCode } from "../../lib/codeGenerator";
@@ -25,6 +25,86 @@ export async function canViewAllTaskStats(user: AccessTokenPayload): Promise<boo
 async function getCallerEmployeeId(userId: number): Promise<number | null> {
   const row = (await db.select({ employeeId: users.employeeId }).from(users).where(eq(users.id, userId)).limit(1))[0];
   return row?.employeeId ?? null;
+}
+
+// Resolves the department a DepartmentHead heads up, via their own employee record — mirrors the
+// same "caller employeeId -> departmentId" lookup scopeResolver.ts already uses for projects.
+async function getCallerDepartmentId(userId: number): Promise<number | null> {
+  const employeeId = await getCallerEmployeeId(userId);
+  if (!employeeId) return null;
+  const row = (await db.select({ departmentId: employees.departmentId }).from(employees).where(eq(employees.id, employeeId)).limit(1))[0];
+  return row?.departmentId ?? null;
+}
+
+// The employee ids that make up a DepartmentHead's own team (their department, excluding no one
+// — the head themselves may or may not have a row in the roster; either way this is exactly "who
+// they're allowed to see/assign work to").
+export async function getTeamEmployeeIds(departmentId: number): Promise<number[]> {
+  const rows = await db.select({ id: employees.id }).from(employees).where(and(eq(employees.departmentId, departmentId), isNull(employees.deletedAt)));
+  return rows.map((r) => r.id);
+}
+
+export async function isDepartmentHead(user: AccessTokenPayload): Promise<boolean> {
+  return user.roles.includes("DepartmentHead");
+}
+
+// "My Teams" screen data: the head's own department's other employees, each with a rollup of
+// their current ticket statuses. Excludes the head's own employee row — they're the one viewing
+// the team, not a member of it.
+export async function getMyTeam(user: AccessTokenPayload) {
+  const departmentId = await getCallerDepartmentId(user.userId);
+  if (!departmentId) return { departmentId: null, departmentName: null, members: [] };
+
+  const callerEmployeeId = await getCallerEmployeeId(user.userId);
+  const deptNames = await departmentNamesById();
+
+  const teamRows = await db
+    .select()
+    .from(employees)
+    .where(and(eq(employees.departmentId, departmentId), isNull(employees.deletedAt)));
+  const members = teamRows.filter((e) => e.id !== callerEmployeeId);
+  if (members.length === 0) {
+    return { departmentId, departmentName: deptNames.get(departmentId) ?? null, members: [] };
+  }
+
+  const memberIds = members.map((m) => m.id);
+  const assignmentRows = await db
+    .select({
+      employeeId: employeeTaskAssignments.employeeId,
+      status: employeeTaskAssignments.status,
+      dueDate: employeeTasks.dueDate,
+      dueTime: employeeTasks.dueTime,
+    })
+    .from(employeeTaskAssignments)
+    .innerJoin(employeeTasks, eq(employeeTasks.id, employeeTaskAssignments.taskId))
+    .where(
+      and(
+        inArray(employeeTaskAssignments.employeeId, memberIds),
+        isNull(employeeTaskAssignments.deletedAt),
+        isNull(employeeTasks.deletedAt)
+      )
+    );
+
+  const now = new Date();
+  const statusByEmployee = new Map<number, Record<string, number>>();
+  for (const row of assignmentRows) {
+    const effective = getEffectiveStatus(row.status, row.dueDate, row.dueTime, now);
+    const bucket = statusByEmployee.get(row.employeeId) ?? { Pending: 0, "In Progress": 0, Completed: 0, "Not Done": 0, "Completed After Due Date": 0 };
+    bucket[effective] = (bucket[effective] ?? 0) + 1;
+    statusByEmployee.set(row.employeeId, bucket);
+  }
+
+  return {
+    departmentId,
+    departmentName: deptNames.get(departmentId) ?? null,
+    members: members.map((m) => ({
+      id: m.id,
+      fullName: m.fullName,
+      roleTitle: m.roleTitle,
+      email: m.email,
+      statusCounts: statusByEmployee.get(m.id) ?? { Pending: 0, "In Progress": 0, Completed: 0, "Not Done": 0, "Completed After Due Date": 0 },
+    })),
+  };
 }
 
 // The cutoff a "Pending"/"In Progress" assignment must cross before it's considered overdue.
@@ -111,6 +191,35 @@ export async function listTasks(user: AccessTokenPayload, opts?: { employeeId?: 
   const filterDepartmentId = opts?.departmentId;
   const deptNames = await departmentNamesById();
 
+  // DepartmentHead is checked before canManageAllTasks even though they now also hold the
+  // "employee-tasks:create" grant (needed so they can raise tickets) — without this ordering
+  // they'd fall into the "sees everything" branch below and see every department's tickets,
+  // not just their own team's.
+  if (await isDepartmentHead(user)) {
+    const departmentId = await getCallerDepartmentId(user.userId);
+    if (!departmentId) return [];
+    const teamEmployeeIds = await getTeamEmployeeIds(departmentId);
+    if (teamEmployeeIds.length === 0) return [];
+
+    const teamAssignments = await db
+      .select({ taskId: employeeTaskAssignments.taskId })
+      .from(employeeTaskAssignments)
+      .where(and(inArray(employeeTaskAssignments.employeeId, teamEmployeeIds), isNull(employeeTaskAssignments.deletedAt)));
+    const taskIds = [...new Set(teamAssignments.map((a) => a.taskId))];
+    if (taskIds.length === 0) return [];
+
+    const taskConditions = [inArray(employeeTasks.id, taskIds), isNull(employeeTasks.deletedAt)];
+    if (filterDepartmentId) taskConditions.push(eq(employeeTasks.departmentId, filterDepartmentId));
+    const taskRows = await db.select().from(employeeTasks).where(and(...taskConditions)).orderBy(employeeTasks.createdAt);
+    const allAssignments = await assignmentsWithEmployeeNames(taskRows.map((t) => t.id));
+    // Only show the team members' own assignment rows on each task, even if other departments
+    // are also assigned to the same task — keeps the head's view scoped to "my team's work."
+    const teamAssignmentsOnly = allAssignments.filter((a) => teamEmployeeIds.includes(a.employeeId));
+    const filteredAssignments = filterEmployeeId ? teamAssignmentsOnly.filter((a) => a.employeeId === filterEmployeeId) : teamAssignmentsOnly;
+    const visibleTaskIds = filterEmployeeId ? [...new Set(filteredAssignments.map((a) => a.taskId))] : taskIds;
+    return taskRows.filter((t) => visibleTaskIds.includes(t.id)).map((t) => withAggregate(t, filteredAssignments, deptNames));
+  }
+
   if (await canManageAllTasks(user)) {
     const taskConditions = [isNull(employeeTasks.deletedAt)];
     if (filterDepartmentId) taskConditions.push(eq(employeeTasks.departmentId, filterDepartmentId));
@@ -168,15 +277,54 @@ async function getTaskUnchecked(id: number) {
   return withAggregate(task, assignments, deptNames);
 }
 
+async function isTeamTask(taskId: number, teamEmployeeIds: number[]): Promise<boolean> {
+  if (teamEmployeeIds.length === 0) return false;
+  const row = (
+    await db
+      .select({ id: employeeTaskAssignments.id })
+      .from(employeeTaskAssignments)
+      .where(
+        and(
+          eq(employeeTaskAssignments.taskId, taskId),
+          inArray(employeeTaskAssignments.employeeId, teamEmployeeIds),
+          isNull(employeeTaskAssignments.deletedAt)
+        )
+      )
+      .limit(1)
+  )[0];
+  return !!row;
+}
+
 export async function getTask(id: number, user: AccessTokenPayload) {
-  if (!(await canManageAllTasks(user))) {
+  // Checked ahead of canManageAllTasks for the same reason as listTasks — DepartmentHead now
+  // holds "employee-tasks:create" (so they can raise tickets) but must still be confined to
+  // their own team's tickets, not every task in the system.
+  if (await isDepartmentHead(user)) {
+    const departmentId = await getCallerDepartmentId(user.userId);
+    const teamEmployeeIds = departmentId ? await getTeamEmployeeIds(departmentId) : [];
+    if (!(await isTeamTask(id, teamEmployeeIds))) throw forbidden();
+  } else if (!(await canManageAllTasks(user))) {
     const employeeId = await getCallerEmployeeId(user.userId);
     if (!(await isAssigneeOfTask(id, employeeId))) throw forbidden();
   }
   return getTaskUnchecked(id);
 }
 
-export async function createTask(input: CreateTaskInput, creatorUserId: number) {
+// A DepartmentHead may only assign tickets to members of their own team — enforced here (not
+// just hidden in the UI) so the restriction holds even if someone calls the API directly.
+// Admin/other roles with the "employee-tasks:create|update" grant are unrestricted, matching
+// existing behavior for everyone but DepartmentHead.
+async function assertAssigneesWithinDepartment(user: AccessTokenPayload, assigneeIds: number[]) {
+  if (!(await isDepartmentHead(user))) return;
+  const departmentId = await getCallerDepartmentId(user.userId);
+  const teamEmployeeIds = departmentId ? await getTeamEmployeeIds(departmentId) : [];
+  const outsideTeam = assigneeIds.some((id) => !teamEmployeeIds.includes(id));
+  if (outsideTeam) throw forbidden("You can only assign tickets to members of your own team");
+}
+
+export async function createTask(input: CreateTaskInput, creator: AccessTokenPayload) {
+  const creatorUserId = creator.userId;
+  await assertAssigneesWithinDepartment(creator, input.assigneeIds);
   const taskCode = nextCode("employee_tasks", "task_code", "ETSK", 4);
 
   const { task, assignmentRows } = db.transaction((tx) => {
@@ -225,11 +373,13 @@ export async function createTask(input: CreateTaskInput, creatorUserId: number) 
   return getTaskUnchecked(task.id);
 }
 
-export async function updateTask(id: number, input: UpdateTaskInput, userId: number) {
+export async function updateTask(id: number, input: UpdateTaskInput, user: AccessTokenPayload) {
+  const userId = user.userId;
   const before = (await db.select().from(employeeTasks).where(and(eq(employeeTasks.id, id), isNull(employeeTasks.deletedAt))).limit(1))[0];
   if (!before) throw notFound("Task");
 
   const { title, description, priority, dueDate, dueTime, departmentId, assigneeIds } = input;
+  if (assigneeIds) await assertAssigneesWithinDepartment(user, assigneeIds);
   const columnUpdates: Partial<typeof employeeTasks.$inferInsert> = { updatedAt: new Date() };
   if (title !== undefined) columnUpdates.title = title;
   if (description !== undefined) columnUpdates.description = description;
@@ -440,24 +590,41 @@ export async function addComment(assignmentId: number, user: AccessTokenPayload,
   return row;
 }
 
+const EMPTY_STATS = {
+  totalTasks: 0,
+  statusCounts: { Pending: 0, "In Progress": 0, Completed: 0, "Not Done": 0, "Completed After Due Date": 0 },
+  completionPct: 0,
+  overdueCount: 0,
+  employeeCompletion: [],
+  monthlyTrend: [],
+  weeklyTrend: [],
+};
+
 export async function getStats(user: AccessTokenPayload, opts?: { employeeId?: number }) {
-  const manageAll = await canViewAllTaskStats(user);
   const requestedEmployeeId = opts?.employeeId;
-  const employeeId = manageAll ? requestedEmployeeId ?? null : await getCallerEmployeeId(user.userId);
-  if (!manageAll && !employeeId) {
-    return {
-      totalTasks: 0,
-      statusCounts: { Pending: 0, "In Progress": 0, Completed: 0, "Not Done": 0, "Completed After Due Date": 0 },
-      completionPct: 0,
-      overdueCount: 0,
-      employeeCompletion: [],
-      monthlyTrend: [],
-      weeklyTrend: [],
-    };
+
+  // DepartmentHead's "manage all" grant (needed to raise tickets) must not translate into
+  // company-wide analytics — scope to the team instead, same as listTasks/getTask above.
+  if (await isDepartmentHead(user)) {
+    const departmentId = await getCallerDepartmentId(user.userId);
+    const teamEmployeeIds = departmentId ? await getTeamEmployeeIds(departmentId) : [];
+    if (teamEmployeeIds.length === 0) return EMPTY_STATS;
+    if (requestedEmployeeId && !teamEmployeeIds.includes(requestedEmployeeId)) return EMPTY_STATS;
+    const scopeIds = requestedEmployeeId ? [requestedEmployeeId] : teamEmployeeIds;
+    return computeStats(inArray(employeeTaskAssignments.employeeId, scopeIds));
   }
 
-  const scopeCondition = employeeId
-    ? and(isNull(employeeTaskAssignments.deletedAt), eq(employeeTaskAssignments.employeeId, employeeId))
+  const manageAll = await canViewAllTaskStats(user);
+  const employeeId = manageAll ? requestedEmployeeId ?? null : await getCallerEmployeeId(user.userId);
+  if (!manageAll && !employeeId) return EMPTY_STATS;
+
+  const scopeCondition = employeeId ? eq(employeeTaskAssignments.employeeId, employeeId) : undefined;
+  return computeStats(scopeCondition);
+}
+
+async function computeStats(employeeScopeCondition: SQL | undefined) {
+  const scopeCondition = employeeScopeCondition
+    ? and(isNull(employeeTaskAssignments.deletedAt), employeeScopeCondition)
     : isNull(employeeTaskAssignments.deletedAt);
 
   const rawRows = await db

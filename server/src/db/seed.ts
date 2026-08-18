@@ -45,42 +45,43 @@ const roster: RosterRow[] = [
   { name: "Shamshad Ali", designation: "Senior Vice Chairman", roles: ["User"], dept: 0 },
   { name: "Vania Ali", designation: "Sales & Marketing", roles: ["User"], dept: 1 },
   { name: "Shiraan Ali", designation: "Sales & Marketing", roles: ["User"], dept: 1 },
-  { name: "Asad Ali", designation: "Group Director", roles: ["Admin", "DepartmentHead"], dept: 0 },
-  { name: "Muhammad Adeel", designation: "Manager Supply Chain", roles: ["User"], dept: 2 },
-  { name: "Kashif Bashir", designation: "Director IFC ISB", roles: ["User"], dept: 3 },
+  { name: "Asad Ali", designation: "Group Director", roles: ["Admin", "CEO"], dept: 0 },
+  { name: "Muhammad Adeel", designation: "Manager Supply Chain", roles: ["User"], dept: 11 },
+  { name: "Kashif Bashir", designation: "Director IFC ISB", roles: ["User"], dept: 12 },
   { name: "Brig Nayyar Abbas Zaidi", designation: "Sale Support", roles: ["User"], dept: 1 },
   { name: "AVM Hussain", designation: "Sale Support", roles: ["User"], dept: 1 },
   { name: "Ibad Jabbar", designation: "Business Development", roles: ["User"], dept: 1 },
   { name: "Usman", designation: "Business Development", key: "bizdev", roles: ["User"], dept: 1 },
-  { name: "Atif Tasneem", designation: "Manager OEP KSA", roles: ["User"], dept: 4 },
-  { name: "Zaheer Ahmed", designation: "Group Manager", roles: ["User"], dept: 0 },
+  { name: "Atif Tasneem", designation: "Manager OEP KSA", roles: ["User"], dept: 12 },
+  { name: "Zaheer Ahmed", designation: "Group Manager", roles: ["User", "DepartmentHead"], dept: 11 },
   { name: "Muhammad Meer", designation: "Assistant KSA (Seafood Division)", roles: ["User"], dept: 4 },
   { name: "Kanwal", designation: "Aviation Assistant KHI", roles: ["User"], dept: 3 },
   { name: "Ziaullah", designation: "Microbiologist", roles: ["User"], dept: 4 },
-  { name: "Tahir Hussain", designation: "Manager", roles: ["User"], dept: 2 },
-  { name: "Mohammad Tariq Zubair Khan", designation: "Cargo Manager/Sales and Operation", roles: ["User"], dept: 2 },
-  { name: "Adnan Shahid", designation: "Assistant Manager Cargo Sales and Operation", roles: ["User"], dept: 2 },
-  { name: "Ahsan Ali", designation: "Cargo Operation South", roles: ["User"], dept: 2 },
-  { name: "Syed Azfal Ali Zahidi", designation: "CFO", roles: ["User"], dept: 6 },
-  { name: "Kashif Ali", designation: "Travel Manager", roles: ["User"], dept: 3 },
-  { name: "Muharram Ali", designation: "Manager Operation", roles: ["User"], dept: 2 },
-  { name: "Gohar Mehdi", designation: "IT Manager/Asst. Manager Finance", roles: ["User"], dept: 5 },
+  { name: "Tahir Hussain", designation: "Manager", roles: ["User"], dept: 11 },
+  { name: "Mohammad Tariq Zubair Khan", designation: "Cargo Manager/Sales and Operation", roles: ["User", "DepartmentHead"], dept: 10 },
+  { name: "Adnan Shahid", designation: "Assistant Manager Cargo Sales and Operation", roles: ["User"], dept: 10 },
+  { name: "Ahsan Ali", designation: "Cargo Operation South", roles: ["User"], dept: 10 },
+  { name: "Syed Azfal Ali Zahidi", designation: "CFO", roles: ["User", "DepartmentHead"], dept: 6 },
+  { name: "Kashif Ali", designation: "Travel Manager", roles: ["User"], dept: 11 },
+  { name: "Muharram Ali", designation: "Manager Operation", roles: ["User"], dept: 10 },
+  { name: "Gohar Mehdi", designation: "IT Manager/Asst. Manager Finance", roles: ["User"], dept: 6 },
   { name: "Inshaal Ali Khan", designation: "Assistant Operation Manager IFC", roles: ["User"], dept: 3 },
   { name: "Jahanzaib Saleem", designation: "Assistant Operation Manager IFC", roles: ["User"], dept: 3 },
   { name: "Shaharyar Ali", designation: "Assistant Operation Manager IFC", roles: ["User"], dept: 3 },
-  { name: "Shazhad Rahim Ali", designation: "Admin Manager/HR IFC", roles: ["User"], dept: 7 },
-  { name: "Asad Naviad", designation: "AI-Automation Engineer", roles: ["User"], dept: 5 },
-  { name: "M. Danish Meraj", designation: "AI-Automation Engineer - Intern", roles: ["User"], dept: 5 },
-  { name: "Shazaib Ahmed", designation: "Business Process Analyst", roles: ["User"], dept: 5 },
-  { name: "Ajiya Anwar", designation: "AI-Automation Engineer", roles: ["User"], dept: 5 },
-  { name: "MarJan Farooqui", designation: "Legal Officer/HR Manager", roles: ["User"], dept: 8 },
-  { name: "Muhammad Qasim", designation: "Assistant Manager", roles: ["User"], dept: 2 },
-  { name: "Shehbaz Ahmed", designation: "Director/Country Manager", roles: ["User"], dept: 0 },
+  { name: "Shazhad Rahim Ali", designation: "Admin Manager/HR IFC", roles: ["User"], dept: 13 },
+  { name: "Asad Naviad", designation: "AI-Automation Engineer", roles: ["User"], dept: 14 },
+  { name: "M. Danish Meraj", designation: "AI-Automation Engineer - Intern", roles: ["User"], dept: 14 },
+  { name: "Shazaib Ahmed", designation: "Business Process Analyst", roles: ["User"], dept: 14 },
+  { name: "Ajiya Anwar", designation: "AI-Automation Engineer", roles: ["User"], dept: 14 },
+  { name: "Usman Amjad", designation: "IT Manager", roles: ["User", "DepartmentHead"], dept: 14 },
+  { name: "MarJan Farooqui", designation: "Legal Officer/HR Manager", roles: ["User", "DepartmentHead"], dept: 13 },
+  { name: "Muhammad Qasim", designation: "Assistant Manager", roles: ["User"], dept: 10 },
+  { name: "Shehbaz Ahmed", designation: "Director/Country Manager", roles: ["User", "DepartmentHead"], dept: 12 },
   { name: "Razia Ashraf", designation: "Assistant Manager LHE", roles: ["User"], dept: 2 },
-  { name: "Ghulm Sadiq", designation: "Manager LHE", roles: ["User"], dept: 2 },
+  { name: "Ghulm Sadiq", designation: "Manager LHE", roles: ["User"], dept: 12 },
   { name: "Ishtiaq Ahmed", designation: "Office Accounts Assistant", roles: ["User"], dept: 6 },
-  { name: "Mumtaz Hussain", designation: "", roles: ["User"], dept: 9 },
-  { name: "Muhammad Amjad SKT", designation: "Asst Manager Operation", roles: ["User"], dept: 2 },
+  { name: "Mumtaz Hussain", designation: "Accountant", roles: ["User"], dept: 6 },
+  { name: "Muhammad Amjad SKT", designation: "Asst Manager Operation", roles: ["User"], dept: 12 },
   { name: "Muhammad Qasim SKT", designation: "Cargo Operation North", roles: ["User"], dept: 2 },
   { name: "Danish", designation: "Delivery Boy", roles: ["User"], dept: 9 },
   { name: "Hasnain", designation: "Office Assistant", roles: ["User"], dept: 9 },
@@ -243,6 +244,13 @@ async function main() {
   // by row ownership (are you the assignee?) in employee-tasks.service.ts, not by
   // requirePermission — a permission grant there would only matter for *managing other people's*
   // tasks.
+  // DepartmentHead gets create/update on "employee-tasks" so they can raise/edit tickets for
+  // their own team — the Task Board screen itself stays Admin-only (blocked in AuthGuard's
+  // ADMIN_ONLY_PATHS regardless of this grant); this only unlocks POST/PATCH on the API plus the
+  // "My Teams" screen's own create-ticket button. Assignment is further restricted to the
+  // caller's own department inside employee-tasks.service.ts, not by RBAC.
+  grants.push({ role: "DepartmentHead", module: "employee-tasks", action: "create" });
+  grants.push({ role: "DepartmentHead", module: "employee-tasks", action: "update" });
 
   const permByKey = Object.fromEntries(permRows.map((p) => [`${p.module}:${p.action}`, p.id]));
   const seenGrants = new Set<string>();
@@ -258,6 +266,10 @@ async function main() {
   await db.insert(rolePermissions).values(dedupedGrantRows);
 
   // ---- departments ----
+  // Indices 10+ are dedicated DepartmentHead teams carved out of the broader groups above
+  // (e.g. "Cargo Operations" still holds the LHE/SKT branch staff who are NOT on Mohammad Tariq
+  // Zubair Khan's team) — kept as separate departments rather than reusing an existing dept id so
+  // other employees who share that old department aren't swept into a DepartmentHead's team.
   const deptNames = [
     "Leadership/Executive",
     "Sales & Marketing",
@@ -269,6 +281,11 @@ async function main() {
     "HR & Admin",
     "Legal",
     "Support Staff",
+    "Cargo & Operations — IFC Karachi",
+    "Group Operations & Services",
+    "Regional & Country Offices",
+    "Legal, HR & Administration",
+    "Technology & AI Automation",
   ];
   const deptRows = await db.insert(departments).values(deptNames.map((name) => ({ name }))).returning();
 
@@ -324,7 +341,7 @@ async function main() {
   // Convenience indices into the new roster for reassigning demo business data below.
   // (0-based against `roster`/`empRows`/`userRows`.)
   const iChairman = 0; // Syed Shujaat Ali — Admin+CEO
-  const iDirector = 4; // Asad Ali — Admin+Director
+  const iDirector = 4; // Asad Ali — Admin+CEO (same full access as Syed Shujaat Ali)
   const iSalesA = 2; // Vania Ali — Sales & Marketing
   const iSalesB = 3; // Shiraan Ali — Sales & Marketing
   const iSupplyChain = 5; // Muhammad Adeel — Manager Supply Chain
@@ -709,7 +726,7 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log(`Created ${userRows.length} real employee accounts (2 Admin: Syed Shujaat Ali [Admin+CEO], Asad Ali [Admin+Director]; ${userRows.length - 2} User accounts).`);
+  console.log(`Created ${userRows.length} real employee accounts (2 Admin: Syed Shujaat Ali [Admin+CEO], Asad Ali [Admin+CEO]; ${userRows.length - 2} User accounts).`);
   console.log(`Generated login credentials written to: ${credentialsPath}`);
   console.log("This file is gitignored — distribute credentials securely and delete/rotate afterward.");
 }

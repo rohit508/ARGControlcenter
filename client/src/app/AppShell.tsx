@@ -25,6 +25,7 @@ const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: s
     label: "Employee Tasks",
     items: [
       { to: "/employee-tasks", label: "Task Board", roles: ["Admin"] },
+      { to: "/my-team", label: "My Teams", roles: ["DepartmentHead"] },
       { to: "/my-tasks", label: "My Tasks" },
       { to: "/task-analytics", label: "Task Analytics" },
     ],
@@ -158,7 +159,12 @@ export default function AppShell() {
   // role. Admin always sees everything.
   const isAdmin = user?.roles.includes("Admin") ?? false;
   const isPlainUser = !isAdmin && user?.roles.length === 1 && user.roles[0] === "User";
-  const USER_ALLOWED_PATHS = ["/my-tasks", "/task-analytics"];
+  // DepartmentHead (without Admin) gets the exact same restricted view as a plain User, plus
+  // "My Teams" — not the full normal-user nav (Projects/CRM/Finance/etc.) and not Admin's
+  // grayed-out "Coming Soon" treatment either. Admin+DepartmentHead still renders as Admin above.
+  const isDepartmentHeadOnly = !isAdmin && (user?.roles.includes("DepartmentHead") ?? false);
+  const isRestrictedNavUser = isPlainUser || isDepartmentHeadOnly;
+  const USER_ALLOWED_PATHS = isDepartmentHeadOnly ? ["/my-team", "/my-tasks", "/task-analytics"] : ["/my-tasks", "/task-analytics"];
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
@@ -170,9 +176,10 @@ export default function AppShell() {
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
           {NAV_GROUPS.map((group) => {
-            // Plain Users only ever see their two allowed links — everything else stays hidden,
-            // not grayed, since admin section names shouldn't be visible to them at all.
-            const items = isPlainUser
+            // Plain Users (and DepartmentHead-without-Admin) only ever see their allowed links —
+            // everything else stays hidden, not grayed, since admin section names shouldn't be
+            // visible to them at all.
+            const items = isRestrictedNavUser
               ? group.items.filter((item) => USER_ALLOWED_PATHS.includes(item.to))
               : group.items;
             if (items.length === 0) return null;
