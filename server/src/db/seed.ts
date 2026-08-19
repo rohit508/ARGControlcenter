@@ -109,6 +109,8 @@ const roster: RosterRow[] = [
   { name: "Mumtaz", designation: "Fisheries", key: "fisheries", roles: ["User"], dept: 4 },
   { name: "Guard 3", designation: "House", roles: ["User"], dept: 9 },
   { name: "Guard 4", designation: "House", roles: ["User"], dept: 9 },
+  { name: "Khizra Iqbal", designation: "Software Engineer", roles: ["User"], dept: 14 },
+  { name: "Rohit", designation: "Software Engineer", roles: ["User"], dept: 14 },
 ];
 
 function slugify(name: string): string {
