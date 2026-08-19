@@ -7,6 +7,7 @@ import { nextCode } from "../../lib/codeGenerator";
 import { userHasPermission } from "../../middleware/rbac.middleware";
 import { AccessTokenPayload } from "../../lib/jwt";
 import { CreateTaskInput, UpdateTaskInput, UpdateAssignmentStatusInput } from "./employee-tasks.schema";
+import { notifyTaskAssignment } from "./taskNotifications";
 
 export async function canManageAllTasks(user: AccessTokenPayload): Promise<boolean> {
   return userHasPermission(user, "employee-tasks", "create");
@@ -369,6 +370,17 @@ export async function createTask(input: CreateTaskInput, creator: AccessTokenPay
       }))
     );
   }
+
+  await notifyTaskAssignment({
+    taskCode: task.taskCode,
+    title: task.title,
+    description: task.description,
+    priority: task.priority,
+    dueDate: task.dueDate,
+    dueTime: task.dueTime,
+    departmentId: task.departmentId,
+    assignments: assignmentRows.map((a) => ({ employeeId: a.employeeId, assignmentId: a.id })),
+  });
 
   return getTaskUnchecked(task.id);
 }

@@ -7,6 +7,7 @@ import { asyncHandler } from "../../middleware/errorHandler.middleware";
 import { authenticate } from "../../middleware/auth.middleware";
 import { nextCode } from "../../lib/codeGenerator";
 import { computeSlaStatus } from "./sla.logic";
+import { notifyTicketAssignment } from "./ticketNotifications";
 
 const ticketSchema = z.object({
   subject: z.string().min(1),
@@ -28,6 +29,7 @@ const router = buildCrudRouter({
   updateSchema: ticketSchema.partial(),
   codeColumn: "ticketCode",
   codePrefix: "TCK",
+  onAfterWrite: notifyTicketAssignment,
   extraRoutes: (router) => {
     router.get(
       "/with-sla",

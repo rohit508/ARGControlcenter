@@ -14,6 +14,16 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(16, "JWT_ACCESS_SECRET must be at least 16 characters"),
   JWT_REFRESH_SECRET: z.string().min(16, "JWT_REFRESH_SECRET must be at least 16 characters"),
   CORS_ORIGINS: z.string().default("http://localhost:5173"), // comma-separated allowlist
+  APP_URL: z.string().default("http://localhost:5173"), // web client origin, used to build links in emails
+
+  // SMTP is optional: if SMTP_HOST is unset, mailer.ts logs instead of sending. Lets ticket
+  // assignment notifications work in every environment without forcing a mail account on dev/test.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default("ERP System <no-reply@erp.local>"),
 });
 
 function loadEnv() {
