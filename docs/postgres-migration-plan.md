@@ -1,7 +1,7 @@
 # SQLite → PostgreSQL (Neon) Migration Plan
 
-**Status:** Steps 1–6 done, Step 7 done locally (render.yaml deploy update still pending —
-needs user confirmation before touching production config)
+**Status:** All 9 steps done. Live in production on Railway (not Render — see note below),
+connected to Neon, verified end-to-end (readiness check + real login).
 **Backup taken:** `server/backups/dev.db.backup_20260820_144106` (634,880 bytes, 70 users confirmed present)
 
 ## Goal
@@ -155,22 +155,49 @@ verification step is to make this reversible until the very last step (cutover).
       (exit 0 = skip seed).
 - [x] Added `server/backups/` and `server/drizzle-sqlite-archive/` to `.gitignore` (the SQLite
       backup binary and archived migrations shouldn't be committed).
-- [x] Committed (`1888a50`) and pushed to `origin/main` — **this triggers Render's auto-deploy**.
-- [ ] **Manual step required, not done by Claude**: set `DATABASE_URL` in the Render dashboard
-      (Environment tab) to the Neon connection string — it's `sync: false` in `render.yaml` so
-      it was deliberately not committed to the repo. Without this the deployed server will
-      crash on boot (can't connect to a DB). Also double-check `CORS_ORIGINS` is still set
-      correctly in the same tab.
-- [ ] Confirm production API boots and connects to Neon (`healthCheckPath` = `/api/v1/ready`
-      should pass in Render's dashboard once `DATABASE_URL` is set)
-- [ ] Smoke-test login against the production URL with a real seeded account
+- [x] Committed (`1888a50`) and pushed to `origin/main`.
+- **Platform change: deployed on Railway, not Render.** Render's free tier started requiring
+  card verification for a new web service (unexpected — `render.yaml`'s `plan: free` implied
+  otherwise) and the user chose not to hand over card details for a free tier. The repo already
+  had working `server/railway.json` / `client/railway.json` from a prior Railway deployment of
+  this same project, so we switched platforms instead. `render.yaml` is left in the repo
+  as-is (harmless, unused) in case Render is revisited later — nobody should assume it's
+  actively deployed from it.
+- [x] Created a new Railway project (`modest-rebirth` workspace), connected
+      `rohit508/ARGControlcenter`, root directory `server` — Railway auto-used the existing
+      `server/railway.json` (build: `npm install --include=dev && npm run build`, start:
+      `sh scripts/deploy-start.sh`, already Postgres-compatible from Step 8's script rewrite).
+- [x] Set 5 env vars manually in Railway's Variables tab: `DATABASE_URL` (Neon connection
+      string), `CORS_ORIGINS`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `NODE_ENV=production`.
+- [x] **First deploy crashed** — `DATABASE_URL` was left at Railway's own auto-added
+      `file:./dev.db` default (Railway pre-populates some vars itself; this one wasn't ours and
+      wasn't caught before first deploy). Fixed by editing the variable to the real Neon URL.
+- [x] **Second deploy went "Active" but returned 502** on every request. Deploy logs showed the
+      server actually booted fine (`ERP API listening on :8080`, DB connected, seed correctly
+      skipped since the 70 migrated users were found) — but every request then crashed with
+      `ValidationError: ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` from `express-rate-limit`. Root
+      cause: Railway (like Render) sits in front of the app as a reverse proxy and adds
+      `X-Forwarded-For`, but Express's `trust proxy` setting defaults to `false` — with it off,
+      `express-rate-limit` refuses to trust that header and throws on every single request.
+      Fixed in `server/src/app.ts`: `app.set("trust proxy", 1)` in production (trusting exactly
+      1 hop, not unlimited, so a client still can't spoof their own IP via a fake
+      `X-Forwarded-For` chain). Committed (`42d7a37`) and pushed — this was a real app-code bug
+      that would have hit Render identically, not a Railway-specific issue.
+- [x] **Third deploy: confirmed working end-to-end.**
+      `curl https://argcontrolcenter-production.up.railway.app/api/v1/ready` →
+      `{"status":"ready"}`. Login tested with a real seeded account
+      (`syed.shujaat.ali@erp.local`) → valid JWT, correct roles (`Admin`, `CEO`), full
+      permission set returned. **Production is live on Neon.**
 
-## Step 9 — Cleanup (only after Step 8 is confirmed stable)
+## Step 9 — Cleanup (optional, not yet done)
 
-- [ ] Keep `server/dev.db` and the backup around for at least a few days as a safety net
-- [ ] Once confident, `better-sqlite3`-specific code paths can be removed if no longer
-      needed for local dev (optional — many teams keep SQLite for local dev and Postgres
-      for prod, in which case this step is skipped entirely)
+- [ ] Keep `server/dev.db` and the backup around for at least a few days as a safety net before
+      considering deleting either.
+- [ ] `better-sqlite3` / `@types/better-sqlite3` are still listed in `server/package.json` but
+      unused by `src/` — can be removed once confident, or kept if SQLite is still wanted for
+      local dev alongside Postgres in production. Not urgent either way.
+- [ ] `render.yaml` could be deleted or updated to match the Railway setup if Render is
+      definitively not going to be used — currently left alone since it's inert either way.
 
 ---
 
