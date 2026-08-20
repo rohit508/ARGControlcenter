@@ -41,6 +41,15 @@ import rbacRoutes from "./modules/rbac/rbac.routes";
 export function createApp() {
   const app = express();
 
+  // Railway/Render terminate TLS and proxy requests through a single hop, adding
+  // X-Forwarded-For. Without this, express-rate-limit throws on every request (it refuses to
+  // trust that header unless Express is explicitly told a proxy is in front of it) — trusting
+  // exactly 1 hop (not `true`/unlimited) avoids a client being able to spoof their own IP by
+  // sending a fake X-Forwarded-For chain.
+  if (env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   app.use(helmet());
   // CORS is an allowlist, not a wildcard — env.CORS_ORIGINS in production should be the real
   // deployed frontend origin(s), never "*". A wildcard here plus credentialed requests is a

@@ -130,16 +130,40 @@ verification step is to make this reversible until the very last step (cutover).
       - `POST /api/v1/tickets` → generated `ticketCode: "TCK-004"` correctly incrementing
         from the 3 migrated tickets, confirming the `SUBSTRING`-based `nextCode()` translation
         works on Postgres. Test ticket deleted after verification.
-- [ ] Update `render.yaml`: remove the SQLite `disk` block, set `DATABASE_URL` to the Neon
-      connection string (as a Render secret, `sync: false`) — **not done yet**, deploy is a
-      separate step the user should confirm before touching production config
+- [x] Updated `render.yaml`: removed the SQLite `disk` block, `DATABASE_URL` is now
+      `sync: false` (set manually in the Render dashboard, not committed), and
+      `healthCheckPath` changed from `/api/v1/health` (confirmed 404 — not a real route) to
+      `/api/v1/ready` (the real DB-connectivity check).
 - Checkpoint: local app fully functional against Neon — passed.
 
-## Step 8 — Deploy
+## Step 8 — Deploy (pushed; awaiting manual Render env var + confirmation)
 
-- [ ] Push `render.yaml` + code changes, deploy to Render
-- [ ] Confirm production API boots and connects to Neon (`healthCheckPath` passes)
-- [ ] Smoke-test login against production URL
+- [x] Generated a real Postgres migration file (`drizzle/0000_spooky_rhodey.sql`, via
+      `drizzle-kit generate`) — the old SQLite migrations
+      (`0000_chunky_secret_warriors.sql`, `0001_silly_alice.sql`) were archived in Step 4,
+      not deleted, and now fully replaced in `server/drizzle/`.
+- [x] Decided deploy migration strategy: `drizzle-kit push` (non-destructive, diffs schema and
+      only adds what's missing, never drops/truncates) rather than a journal-tracked
+      `drizzle-kit migrate` — chosen because Neon's tables already exist from Step 4's manual
+      push and there's no migrations-journal table to reconcile against. Verified locally:
+      running `db:push` against the already-up-to-date Neon schema exits 0 with no prompt in
+      non-interactive mode (confirms it won't hang or require confirmation on Render).
+- [x] Rewrote `server/scripts/deploy-start.sh` for Postgres: runs `db:push`, then seeds only if
+      `users` has zero rows (checked via new `server/scripts/has-existing-data.ts`, since
+      there's no local file to stat against a remote Postgres like the old SQLite version did).
+      Verified `has-existing-data.ts` correctly detects the 70 existing migrated users on Neon
+      (exit 0 = skip seed).
+- [x] Added `server/backups/` and `server/drizzle-sqlite-archive/` to `.gitignore` (the SQLite
+      backup binary and archived migrations shouldn't be committed).
+- [x] Committed (`1888a50`) and pushed to `origin/main` — **this triggers Render's auto-deploy**.
+- [ ] **Manual step required, not done by Claude**: set `DATABASE_URL` in the Render dashboard
+      (Environment tab) to the Neon connection string — it's `sync: false` in `render.yaml` so
+      it was deliberately not committed to the repo. Without this the deployed server will
+      crash on boot (can't connect to a DB). Also double-check `CORS_ORIGINS` is still set
+      correctly in the same tab.
+- [ ] Confirm production API boots and connects to Neon (`healthCheckPath` = `/api/v1/ready`
+      should pass in Render's dashboard once `DATABASE_URL` is set)
+- [ ] Smoke-test login against the production URL with a real seeded account
 
 ## Step 9 — Cleanup (only after Step 8 is confirmed stable)
 
