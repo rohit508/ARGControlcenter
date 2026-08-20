@@ -1,6 +1,6 @@
 import { app } from "./app";
 import { env } from "./env";
-import { sqlite } from "./db/client";
+import { pool } from "./db/client";
 import { scheduleKpiSnapshotJob } from "./jobs/kpiSnapshot.job";
 import { scheduleOverdueTaskSweepJob } from "./jobs/overdueTaskSweep.job";
 
@@ -13,18 +13,18 @@ const server = app.listen(env.PORT, () => {
 /**
  * Graceful shutdown: stop accepting new connections, let in-flight requests finish, then close
  * the DB handle cleanly. Without this, a container orchestrator's SIGTERM during a deploy just
- * kills in-flight requests and can leave the SQLite WAL file in a state that needs recovery on
- * next boot — cheap insurance for something that's easy to forget until it bites in production.
+ * kills in-flight requests and can leave connections dangling against Postgres — cheap insurance
+ * for something that's easy to forget until it bites in production.
  */
 function shutdown(signal: string) {
   console.log(`${signal} received, shutting down gracefully...`);
-  server.close((err) => {
+  server.close(async (err) => {
     if (err) {
       console.error("Error during server close:", err);
       process.exit(1);
     }
     try {
-      sqlite.close();
+      await pool.end();
     } catch (e) {
       console.error("Error closing database:", e);
     }

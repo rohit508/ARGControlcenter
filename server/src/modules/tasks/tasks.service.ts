@@ -42,7 +42,7 @@ export async function getTask(id: number) {
 }
 
 export async function createTask(input: CreateTaskInput, userId: number) {
-  const taskCode = nextCode("tasks", "task_code", "TSK", 4);
+  const taskCode = await nextCode("tasks", "task_code", "TSK", 4);
   const cached = computeCachedFields(input);
   const [row] = await db
     .insert(tasks)

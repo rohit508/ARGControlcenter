@@ -1,16 +1,15 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
+import { pgTable, text, integer, real, timestamp, boolean, serial, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { departments, employees, users } from "./schema.core";
 
 const ts = () => ({
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
 
-export const projects = sqliteTable(
+export const projects = pgTable(
   "projects",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     projectCode: text("project_code").notNull().unique(),
     name: text("name").notNull(),
     program: text("program"),
@@ -43,9 +42,9 @@ export const projects = sqliteTable(
     riskScoreCache: real("risk_score_cache").notNull().default(0),
     plannedValueCache: real("planned_value_cache").notNull().default(0),
     earnedValueCache: real("earned_value_cache").notNull().default(0),
-    recalculatedAt: integer("recalculated_at", { mode: "timestamp" }),
+    recalculatedAt: timestamp("recalculated_at", { mode: "date" }),
 
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
     ...ts(),
   },
   (t) => ({
@@ -54,22 +53,22 @@ export const projects = sqliteTable(
   })
 );
 
-export const projectShares = sqliteTable(
+export const projectShares = pgTable(
   "project_shares",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     projectId: integer("project_id").notNull().references(() => projects.id),
     userId: integer("user_id").notNull().references(() => users.id),
-    showBudget: integer("show_budget", { mode: "boolean" }).notNull().default(false),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    showBudget: boolean("show_budget").notNull().default(false),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ uniq: uniqueIndex("project_shares_uq").on(t.projectId, t.userId) })
 );
 
-export const tasks = sqliteTable(
+export const tasks = pgTable(
   "tasks",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     taskCode: text("task_code").notNull().unique(),
     projectId: integer("project_id").notNull().references(() => projects.id),
     parentTaskId: integer("parent_task_id"),
@@ -89,17 +88,17 @@ export const tasks = sqliteTable(
     progressPct: real("progress_pct").notNull().default(0), // 0..1
     baselineStart: text("baseline_start"),
     baselineFinish: text("baseline_finish"),
-    isMilestone: integer("is_milestone", { mode: "boolean" }).notNull().default(false),
+    isMilestone: boolean("is_milestone").notNull().default(false),
     comments: text("comments"),
 
     // cached/computed by TaskService
     durationDaysCache: integer("duration_days_cache"),
     remainingDaysCache: integer("remaining_days_cache"),
-    isCriticalCache: integer("is_critical_cache", { mode: "boolean" }).notNull().default(false),
+    isCriticalCache: boolean("is_critical_cache").notNull().default(false),
     varianceDaysCache: integer("variance_days_cache"),
     healthCache: text("health_cache").notNull().default("Green"),
 
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
     ...ts(),
   },
   (t) => ({
@@ -108,10 +107,10 @@ export const tasks = sqliteTable(
   })
 );
 
-export const budgetEntries = sqliteTable(
+export const budgetEntries = pgTable(
   "budget_entries",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     entryCode: text("entry_code").notNull().unique(),
     projectId: integer("project_id").notNull().references(() => projects.id),
     costCategory: text("cost_category").notNull(),
@@ -123,16 +122,16 @@ export const budgetEntries = sqliteTable(
     actualCost: real("actual_cost").notNull().default(0),
     forecastCost: real("forecast_cost").notNull().default(0),
     remarks: text("remarks"),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ projectIdx: index("budget_entries_project_idx").on(t.projectId) })
 );
 
-export const risks = sqliteTable(
+export const risks = pgTable(
   "risks",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     riskCode: text("risk_code").notNull().unique(),
     projectId: integer("project_id").notNull().references(() => projects.id),
     category: text("category").notNull(),
@@ -145,16 +144,16 @@ export const risks = sqliteTable(
     status: text("status").notNull().default("Open"),
     targetDate: text("target_date"),
     closedDate: text("closed_date"),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ projectIdx: index("risks_project_idx").on(t.projectId) })
 );
 
-export const issues = sqliteTable(
+export const issues = pgTable(
   "issues",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     issueCode: text("issue_code").notNull().unique(),
     projectId: integer("project_id").notNull().references(() => projects.id),
     description: text("description").notNull(),
@@ -165,16 +164,16 @@ export const issues = sqliteTable(
     dueDate: text("due_date"),
     status: text("status").notNull().default("Open"),
     resolution: text("resolution"),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ projectIdx: index("issues_project_idx").on(t.projectId) })
 );
 
-export const changeRequests = sqliteTable(
+export const changeRequests = pgTable(
   "change_requests",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     changeCode: text("change_code").notNull().unique(),
     projectId: integer("project_id").notNull().references(() => projects.id),
     description: text("description").notNull(),
@@ -185,44 +184,44 @@ export const changeRequests = sqliteTable(
     implementationDate: text("implementation_date"),
     status: text("status").notNull().default("Under Review"),
     workflowInstanceId: integer("workflow_instance_id"),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ projectIdx: index("change_requests_project_idx").on(t.projectId) })
 );
 
-export const milestones = sqliteTable(
+export const milestones = pgTable(
   "milestones",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     projectId: integer("project_id").notNull().references(() => projects.id),
     name: text("name").notNull(),
     ownerId: integer("owner_id").references(() => employees.id),
     plannedDate: text("planned_date").notNull(),
     actualDate: text("actual_date"),
     status: text("status").notNull().default("Pending"),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ projectIdx: index("milestones_project_idx").on(t.projectId) })
 );
 
-export const meetings = sqliteTable(
+export const meetings = pgTable(
   "meetings",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     meetingCode: text("meeting_code").notNull().unique(),
     meetingDate: text("meeting_date").notNull(),
     projectId: integer("project_id").references(() => projects.id),
     discussion: text("discussion"),
     ownerId: integer("owner_id").references(() => employees.id),
     status: text("status").notNull().default("Open"),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ projectIdx: index("meetings_project_idx").on(t.projectId) })
 );
 
-export const meetingAttendees = sqliteTable(
+export const meetingAttendees = pgTable(
   "meeting_attendees",
   {
     meetingId: integer("meeting_id").notNull().references(() => meetings.id),
@@ -231,19 +230,19 @@ export const meetingAttendees = sqliteTable(
   (t) => ({ uniq: uniqueIndex("meeting_attendees_uq").on(t.meetingId, t.employeeId) })
 );
 
-export const actionItems = sqliteTable("action_items", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const actionItems = pgTable("action_items", {
+  id: serial("id").primaryKey(),
   actionCode: text("action_code").notNull().unique(),
   meetingId: integer("meeting_id").references(() => meetings.id),
   description: text("description").notNull(),
   ownerId: integer("owner_id").references(() => employees.id),
   dueDate: text("due_date"),
   status: text("status").notNull().default("Open"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
-export const lessonsLearned = sqliteTable("lessons_learned", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const lessonsLearned = pgTable("lessons_learned", {
+  id: serial("id").primaryKey(),
   lessonCode: text("lesson_code").notNull().unique(),
   projectId: integer("project_id").references(() => projects.id),
   category: text("category").notNull(),
@@ -253,10 +252,10 @@ export const lessonsLearned = sqliteTable("lessons_learned", {
   dateLogged: text("date_logged").notNull(),
 });
 
-export const kpiSnapshots = sqliteTable(
+export const kpiSnapshots = pgTable(
   "kpi_snapshots",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     projectId: integer("project_id").references(() => projects.id), // null = portfolio-level
     snapshotDate: text("snapshot_date").notNull(),
     spi: real("spi").notNull(),
@@ -269,7 +268,7 @@ export const kpiSnapshots = sqliteTable(
     tcpi: real("tcpi").notNull(),
     progressPct: real("progress_pct").notNull(),
     budgetUtilization: real("budget_utilization").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => ({ projIdx: index("kpi_snapshots_project_idx").on(t.projectId, t.snapshotDate) })
 );

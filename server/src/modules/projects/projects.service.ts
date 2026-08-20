@@ -100,7 +100,7 @@ export async function getProject(id: number) {
 }
 
 export async function createProject(input: CreateProjectInput, userId: number) {
-  const projectCode = nextCode("projects", "project_code", "PRJ", 3);
+  const projectCode = await nextCode("projects", "project_code", "PRJ", 3);
   const [row] = await db
     .insert(projects)
     .values({ ...input, projectCode })

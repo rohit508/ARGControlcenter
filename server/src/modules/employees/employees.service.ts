@@ -68,9 +68,11 @@ async function defaultEmployeeRoleId(): Promise<number> {
   return employeeRole.id;
 }
 
-// bcrypt.hash() is async and must run before the transaction opens — better-sqlite3's
-// transaction wrapper executes its callback fully synchronously (confirmed by spike-testing
-// db.transaction() against this driver), so nothing inside the callback below may be awaited.
+// bcrypt.hash() is async and must run before the transaction opens. This used to matter because
+// better-sqlite3's transaction wrapper executed its callback fully synchronously, so nothing
+// inside the callback could be awaited; node-postgres's transaction callback is async (and must
+// be, since every query is a network round-trip), so this is no longer a hard constraint — kept
+// as-is anyway since hashing has no reason to happen inside the DB transaction.
 async function attachLogin(employeeId: number, loginEmail: string, loginPassword: string, roleIds?: number[]) {
   const existing = (await db.select().from(users).where(eq(users.email, loginEmail)).limit(1))[0];
   if (existing) throw conflict("A login with this email already exists");
@@ -80,15 +82,15 @@ async function attachLogin(employeeId: number, loginEmail: string, loginPassword
   const grantRoleIds = roleIds && roleIds.length > 0 ? roleIds : [await defaultEmployeeRoleId()];
 
   const passwordHash = await bcrypt.hash(loginPassword, 10);
-  return db.transaction((tx) => {
-    const [user] = tx.insert(users).values({ email: loginEmail, passwordHash, employeeId, contactType: "internal" }).returning().all();
-    tx.insert(userRoles).values(grantRoleIds.map((roleId) => ({ userId: user.id, roleId }))).run();
+  return db.transaction(async (tx) => {
+    const [user] = await tx.insert(users).values({ email: loginEmail, passwordHash, employeeId, contactType: "internal" }).returning();
+    await tx.insert(userRoles).values(grantRoleIds.map((roleId) => ({ userId: user.id, roleId })));
     return user;
   });
 }
 
 export async function createEmployee(input: CreateEmployeeInput, actorUserId: number) {
-  const employeeCode = nextCode("employees", "employee_code", "EMP", 3);
+  const employeeCode = await nextCode("employees", "employee_code", "EMP", 3);
   const { createLogin, loginEmail, loginPassword, roleIds, ...core } = input;
 
   let grantRoleIds: number[] | undefined;
@@ -97,16 +99,16 @@ export async function createEmployee(input: CreateEmployeeInput, actorUserId: nu
     const existing = (await db.select().from(users).where(eq(users.email, loginEmail)).limit(1))[0];
     if (existing) throw conflict("A login with this email already exists");
     grantRoleIds = roleIds && roleIds.length > 0 ? roleIds : [await defaultEmployeeRoleId()];
-    passwordHash = await bcrypt.hash(loginPassword, 10); // must hash before the sync transaction below
+    passwordHash = await bcrypt.hash(loginPassword, 10); // hashed before the transaction opens
   }
 
   // One transaction for employee + optional login, so a failure partway through never leaves an
   // orphaned employee record with no login when the admin explicitly asked for one.
-  const row = db.transaction((tx) => {
-    const [employee] = tx.insert(employees).values({ ...core, employeeCode }).returning().all();
+  const row = await db.transaction(async (tx) => {
+    const [employee] = await tx.insert(employees).values({ ...core, employeeCode }).returning();
     if (grantRoleIds && passwordHash) {
-      const [user] = tx.insert(users).values({ email: loginEmail!, passwordHash: passwordHash!, employeeId: employee.id, contactType: "internal" }).returning().all();
-      tx.insert(userRoles).values(grantRoleIds.map((roleId) => ({ userId: user.id, roleId }))).run();
+      const [user] = await tx.insert(users).values({ email: loginEmail!, passwordHash: passwordHash!, employeeId: employee.id, contactType: "internal" }).returning();
+      await tx.insert(userRoles).values(grantRoleIds.map((roleId) => ({ userId: user.id, roleId })));
     }
     return employee;
   });

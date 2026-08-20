@@ -54,7 +54,7 @@ export const purchaseOrdersRouter = buildCrudRouter({
       asyncHandler(async (req, res) => {
         const input = poSchema.parse(req.body);
         const totalAmount = round2(input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0));
-        const poNumber = nextCode("purchase_orders", "po_number", "PO", 5);
+        const poNumber = await nextCode("purchase_orders", "po_number", "PO", 5);
         const [po] = await db
           .insert(purchaseOrders)
           .values({

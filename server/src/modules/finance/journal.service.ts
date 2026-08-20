@@ -54,7 +54,7 @@ export async function createJournalEntry(input: CreateJournalEntryInput, userId:
     if (!validIds.has(id)) throw new ApiError(400, "VALIDATION_ERROR", `Account ${id} does not exist in the Chart of Accounts`);
   }
 
-  const entryCode = nextCode("journal_entries", "entry_code", "JE", 5);
+  const entryCode = await nextCode("journal_entries", "entry_code", "JE", 5);
   const [entry] = await db
     .insert(journalEntries)
     .values({ entryCode, entryDate: input.entryDate, memo: input.memo, projectId: input.projectId, postedBy: userId, status: "Posted" })
@@ -85,7 +85,7 @@ export async function reverseJournalEntry(id: number, userId: number) {
   if (entry.status === "Reversed") throw new ApiError(409, "CONFLICT", "Entry already reversed");
   const lines = await db.select().from(journalLines).where(eq(journalLines.journalEntryId, id));
 
-  const reverseCode = nextCode("journal_entries", "entry_code", "JE", 5);
+  const reverseCode = await nextCode("journal_entries", "entry_code", "JE", 5);
   const [reversal] = await db
     .insert(journalEntries)
     .values({ entryCode: reverseCode, entryDate: new Date().toISOString().slice(0, 10), memo: `Reversal of ${entry.entryCode}`, postedBy: userId, status: "Posted" })

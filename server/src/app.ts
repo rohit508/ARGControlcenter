@@ -5,7 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { env, corsOrigins } from "./env";
 import { errorHandler } from "./middleware/errorHandler.middleware";
-import { sqlite } from "./db/client";
+import { pool } from "./db/client";
 
 import authRoutes from "./modules/auth/auth.routes";
 import projectsRoutes from "./modules/projects/projects.routes";
@@ -82,9 +82,9 @@ export function createApp() {
   // Readiness: "is this instance able to actually serve traffic." Checked separately from
   // liveness because that distinction is exactly what a Kubernetes-style orchestrator (or any
   // load balancer health check) needs to route around an instance that's up but DB-broken.
-  app.get("/api/v1/ready", (_req, res) => {
+  app.get("/api/v1/ready", async (_req, res) => {
     try {
-      sqlite.prepare("SELECT 1").get();
+      await pool.query("SELECT 1");
       res.json({ status: "ready" });
     } catch (err) {
       res.status(503).json({ status: "not_ready", error: err instanceof Error ? err.message : "unknown" });

@@ -16,7 +16,7 @@ const warehouseSchema = z.object({ name: z.string().min(1), location: z.string()
 router.get("/warehouses", asyncHandler(async (_req, res) => res.json({ data: await db.select().from(warehouses) })));
 router.post("/warehouses", requirePermission("inventory", "create"), asyncHandler(async (req, res) => {
   const input = warehouseSchema.parse(req.body);
-  const code = nextCode("warehouses", "code", "WH", 3);
+  const code = await nextCode("warehouses", "code", "WH", 3);
   const [row] = await db.insert(warehouses).values({ ...input, code }).returning();
   res.status(201).json({ data: row });
 }));
@@ -40,7 +40,7 @@ router.get("/items", asyncHandler(async (_req, res) => {
 }));
 router.post("/items", requirePermission("inventory", "create"), asyncHandler(async (req, res) => {
   const input = itemSchema.parse(req.body);
-  const sku = nextCode("stock_items", "sku", "SKU", 4);
+  const sku = await nextCode("stock_items", "sku", "SKU", 4);
   const [row] = await db.insert(stockItems).values({ ...input, sku }).returning();
   res.status(201).json({ data: row });
 }));

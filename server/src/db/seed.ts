@@ -2,7 +2,7 @@ import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
-import { db, sqlite } from "./client";
+import { db, pool } from "./client";
 import {
   roles,
   permissions,
@@ -173,12 +173,11 @@ async function main() {
     "refresh_tokens", "user_roles", "users", "employees", "departments", "role_permissions",
     "permissions", "roles",
   ];
-  for (const t of tableNames) sqlite.exec(`DELETE FROM ${t}`);
-  // Every table above uses drizzle's autoIncrement:true (SQLite AUTOINCREMENT), which never
-  // reuses ids even after a DELETE — so re-running this script repeatedly drifts ids upward and
-  // breaks the handful of hardcoded literal FK references below (e.g. projectId: 1). Resetting
-  // the counter here is what actually makes the "idempotent re-seed for dev" comment above true.
-  sqlite.exec("DELETE FROM sqlite_sequence");
+  // TRUNCATE ... RESTART IDENTITY resets each table's `serial` sequence back to 1 in the same
+  // statement as the delete (the Postgres equivalent of the old DELETE + sqlite_sequence reset
+  // combo below) — so re-running this script repeatedly stays idempotent and the handful of
+  // hardcoded literal FK references further down (e.g. projectId: 1) keep resolving correctly.
+  await pool.query(`TRUNCATE TABLE ${tableNames.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`);
 
   // ---- workflow definitions (the generic engine's config, not code) ----
   await db.insert(workflowDefinitions).values([

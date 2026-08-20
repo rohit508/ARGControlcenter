@@ -326,10 +326,10 @@ async function assertAssigneesWithinDepartment(user: AccessTokenPayload, assigne
 export async function createTask(input: CreateTaskInput, creator: AccessTokenPayload) {
   const creatorUserId = creator.userId;
   await assertAssigneesWithinDepartment(creator, input.assigneeIds);
-  const taskCode = nextCode("employee_tasks", "task_code", "ETSK", 4);
+  const taskCode = await nextCode("employee_tasks", "task_code", "ETSK", 4);
 
-  const { task, assignmentRows } = db.transaction((tx) => {
-    const [row] = tx
+  const { task, assignmentRows } = await db.transaction(async (tx) => {
+    const [row] = await tx
       .insert(employeeTasks)
       .values({
         taskCode,
@@ -341,14 +341,12 @@ export async function createTask(input: CreateTaskInput, creator: AccessTokenPay
         departmentId: input.departmentId,
         createdBy: creatorUserId,
       })
-      .returning()
-      .all();
+      .returning();
 
-    const rows = tx
+    const rows = await tx
       .insert(employeeTaskAssignments)
       .values(input.assigneeIds.map((employeeId) => ({ taskId: row.id, employeeId, status: "Pending" as const })))
-      .returning()
-      .all();
+      .returning();
 
     return { task: row, assignmentRows: rows };
   });
@@ -400,15 +398,14 @@ export async function updateTask(id: number, input: UpdateTaskInput, user: Acces
   if (dueTime !== undefined) columnUpdates.dueTime = dueTime;
   if (departmentId !== undefined) columnUpdates.departmentId = departmentId;
 
-  db.transaction((tx) => {
-    tx.update(employeeTasks).set(columnUpdates).where(eq(employeeTasks.id, id)).run();
+  await db.transaction(async (tx) => {
+    await tx.update(employeeTasks).set(columnUpdates).where(eq(employeeTasks.id, id));
 
     if (assigneeIds) {
-      const current = tx
+      const current = await tx
         .select()
         .from(employeeTaskAssignments)
-        .where(and(eq(employeeTaskAssignments.taskId, id), isNull(employeeTaskAssignments.deletedAt)))
-        .all();
+        .where(and(eq(employeeTaskAssignments.taskId, id), isNull(employeeTaskAssignments.deletedAt)));
       const currentEmployeeIds = new Set(current.map((a) => a.employeeId));
       const nextEmployeeIds = new Set(assigneeIds);
 
@@ -416,12 +413,11 @@ export async function updateTask(id: number, input: UpdateTaskInput, user: Acces
       const toAdd = assigneeIds.filter((eid) => !currentEmployeeIds.has(eid));
 
       for (const row of toRemove) {
-        tx.update(employeeTaskAssignments).set({ deletedAt: new Date() }).where(eq(employeeTaskAssignments.id, row.id)).run();
+        await tx.update(employeeTaskAssignments).set({ deletedAt: new Date() }).where(eq(employeeTaskAssignments.id, row.id));
       }
       if (toAdd.length > 0) {
-        tx.insert(employeeTaskAssignments)
-          .values(toAdd.map((employeeId) => ({ taskId: id, employeeId, status: "Pending" as const })))
-          .run();
+        await tx.insert(employeeTaskAssignments)
+          .values(toAdd.map((employeeId) => ({ taskId: id, employeeId, status: "Pending" as const })));
       }
     }
   });
@@ -435,9 +431,9 @@ export async function deleteTask(id: number, userId: number) {
   const before = (await db.select().from(employeeTasks).where(and(eq(employeeTasks.id, id), isNull(employeeTasks.deletedAt))).limit(1))[0];
   if (!before) throw notFound("Task");
 
-  db.transaction((tx) => {
-    tx.update(employeeTasks).set({ deletedAt: new Date() }).where(eq(employeeTasks.id, id)).run();
-    tx.update(employeeTaskAssignments).set({ deletedAt: new Date() }).where(eq(employeeTaskAssignments.taskId, id)).run();
+  await db.transaction(async (tx) => {
+    await tx.update(employeeTasks).set({ deletedAt: new Date() }).where(eq(employeeTasks.id, id));
+    await tx.update(employeeTaskAssignments).set({ deletedAt: new Date() }).where(eq(employeeTaskAssignments.taskId, id));
   });
 
   await writeAudit({ userId, entityType: "employee-tasks", entityId: id, action: "delete", before });

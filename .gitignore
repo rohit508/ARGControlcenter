@@ -13,10 +13,13 @@ CREDENTIALS.local.csv
 CREDENTIALS.local.md
 *_login.json
 
-# SQLite database files (local dev only — production data lives on the Railway volume)
+# SQLite database files (local dev only — production data now lives on Neon Postgres, see
+# docs/postgres-migration-plan.md)
 *.db
 *.db-shm
 *.db-wal
+server/backups/
+server/drizzle-sqlite-archive/
 
 # Logs
 *.log

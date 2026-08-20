@@ -1,13 +1,9 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import path from "path";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { env } from "../env";
 import * as schema from "./schema";
 
-const dbPath = env.DATABASE_URL.replace("file:", "") || path.join(__dirname, "../../dev.db");
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
+const pool = new Pool({ connectionString: env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
-export const db = drizzle(sqlite, { schema });
-export { sqlite };
+export const db = drizzle(pool, { schema });
+export { pool };

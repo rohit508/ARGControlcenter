@@ -122,10 +122,10 @@ router.get(
 router.get(
   "/cost-breakdown",
   asyncHandler(async (_req, res) => {
-    const rows = await db.all(
+    const result = await db.execute(
       sql`SELECT cost_category as category, SUM(actual_cost) as total FROM budget_entries WHERE deleted_at IS NULL GROUP BY cost_category`
     );
-    res.json({ data: rows });
+    res.json({ data: result.rows });
   })
 );
 
@@ -148,14 +148,18 @@ router.get(
   asyncHandler(async (req, res) => {
     const limit = req.query.limit ? Number(req.query.limit) : 8;
     const today = new Date().toISOString().slice(0, 10);
-    const rows = await db.all(
-      sql`SELECT id, project_code as projectCode, name,
-          CAST(julianday(${today}) - julianday(forecast_finish) AS INTEGER) as daysLate
+    // NOTE: SQLite's julianday() date-arithmetic was translated to Postgres date subtraction
+    // (::date - ::date yields an integer day count directly) as part of the dialect migration —
+    // flagged for a closer look/testing pass since it's a raw-SQL behavior change, not a
+    // mechanical schema/type conversion.
+    const result = await db.execute(
+      sql`SELECT id, project_code as "projectCode", name,
+          (${today}::date - forecast_finish::date) as "daysLate"
           FROM projects
           WHERE deleted_at IS NULL AND status != 'Completed' AND forecast_finish IS NOT NULL AND forecast_finish < ${today}
-          ORDER BY daysLate DESC LIMIT ${limit}`
+          ORDER BY "daysLate" DESC LIMIT ${limit}`
     );
-    res.json({ data: rows });
+    res.json({ data: result.rows });
   })
 );
 

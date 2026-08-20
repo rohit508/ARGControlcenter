@@ -73,7 +73,7 @@ export function buildCrudRouter(opts: CrudFactoryOptions): Router {
       const input = opts.createSchema.parse(req.body);
       const values = { ...input };
       if (opts.codeColumn && opts.codePrefix) {
-        values[opts.codeColumn] = nextCode(opts.tableName, camelToSnake(opts.codeColumn), opts.codePrefix, opts.codePad ?? 3);
+        values[opts.codeColumn] = await nextCode(opts.tableName, camelToSnake(opts.codeColumn), opts.codePrefix, opts.codePad ?? 3);
       }
       const [row] = await (db.insert(table).values(values) as any).returning();
       await writeAudit({ userId: req.user!.userId, entityType: opts.entityType, entityId: row.id, action: "create", after: row });

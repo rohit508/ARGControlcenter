@@ -17,7 +17,7 @@ const wcSchema = z.object({ name: z.string().min(1), capacityHoursPerDay: z.numb
 router.get("/work-centers", asyncHandler(async (_req, res) => res.json({ data: await db.select().from(workCenters) })));
 router.post("/work-centers", requirePermission("manufacturing", "create"), asyncHandler(async (req, res) => {
   const input = wcSchema.parse(req.body);
-  const code = nextCode("work_centers", "code", "WC", 3);
+  const code = await nextCode("work_centers", "code", "WC", 3);
   const [row] = await db.insert(workCenters).values({ ...input, code }).returning();
   res.status(201).json({ data: row });
 }));
@@ -31,7 +31,7 @@ router.get("/boms/:id/lines", asyncHandler(async (req, res) => {
 }));
 router.post("/boms", requirePermission("manufacturing", "create"), asyncHandler(async (req, res) => {
   const input = bomSchema.parse(req.body);
-  const bomCode = nextCode("boms", "bom_code", "BOM", 3);
+  const bomCode = await nextCode("boms", "bom_code", "BOM", 3);
   const [bom] = await db.insert(boms).values({ bomCode, outputItemId: input.outputItemId, outputQuantity: input.outputQuantity }).returning();
   await db.insert(bomLines).values(input.lines.map((l) => ({ bomId: bom.id, ...l })));
   res.status(201).json({ data: bom });
@@ -50,7 +50,7 @@ router.get("/production-orders", asyncHandler(async (_req, res) => res.json({ da
 
 router.post("/production-orders", requirePermission("manufacturing", "create"), asyncHandler(async (req, res) => {
   const input = poSchema.parse(req.body);
-  const orderCode = nextCode("production_orders", "order_code", "MO", 4);
+  const orderCode = await nextCode("production_orders", "order_code", "MO", 4);
   const [order] = await db.insert(productionOrders).values({ ...input, orderCode, status: "Planned" }).returning();
   res.status(201).json({ data: order });
 }));
