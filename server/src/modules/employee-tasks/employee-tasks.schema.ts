@@ -50,6 +50,11 @@ export const updateAssignmentStatusSchema = z
 // that case, uploaded as a follow-up request once this comment row (and its id) exists.
 export const addCommentSchema = z.object({ body: z.string().default("") });
 
+export const deleteTaskSchema = z.object({
+  reason: z.string().trim().min(1, "A reason is required to delete a task"),
+});
+
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type UpdateAssignmentStatusInput = z.infer<typeof updateAssignmentStatusSchema>;
+export type DeleteTaskInput = z.infer<typeof deleteTaskSchema>;

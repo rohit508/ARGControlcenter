@@ -6,7 +6,7 @@ import { isOnline, syncNow } from "../services/offlineApi";
 import { pendingCount } from "../services/syncEngine";
 import NotificationBell from "../components/ui/NotificationBell";
 import Toast from "../components/ui/Toast";
-import { useEmployeeTaskStats } from "../modules/employee-tasks/useEmployeeTasks";
+import { useEmployeeTaskStats, useEmployeeTasks } from "../modules/employee-tasks/useEmployeeTasks";
 
 // Admin's primary workflow group — must render first, in this exact order, per product spec.
 // Items here are active for Admin; every other nav item is rendered visible-but-disabled (gray,
@@ -139,6 +139,11 @@ export default function AppShell() {
   const [loginToastPending, setLoginToastPending] = useState(false);
   const [showLoginToast, setShowLoginToast] = useState(false);
   const { data: taskStatsRes } = useEmployeeTaskStats();
+  // Mounted here (not just on the pages that display the list) so /employee-tasks fires
+  // immediately after sign-in too, same as the stats call above — regardless of which page the
+  // user lands on post-login. React Query dedupes this against the same query key already
+  // in flight on whichever page also calls useEmployeeTasks(), so it's not a duplicate request.
+  useEmployeeTasks();
   useEffect(() => {
     if (sessionStorage.getItem("erp-just-logged-in") === "1") {
       sessionStorage.removeItem("erp-just-logged-in");

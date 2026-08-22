@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../services/apiClient";
-import { Attachment, EmployeeTask, EmployeeTaskAssignment, EmployeeTaskComment, EmployeeTaskStats, MyTeam } from "../../types";
+import { Attachment, DeletedEmployeeTask, EmployeeTask, EmployeeTaskAssignment, EmployeeTaskComment, EmployeeTaskStats, MyTeam } from "../../types";
 
 // Real-time is polling-based in this app (no WebSocket/SSE infra exists) — a ~15s refetch plus
 // immediate invalidation right after any mutation keeps the board and dashboard current without
@@ -79,8 +79,16 @@ export function useUpdateEmployeeTask() {
 export function useDeleteEmployeeTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.delete(`/employee-tasks/${id}`),
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => api.delete(`/employee-tasks/${id}`, { reason }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employee-tasks"] }),
+  });
+}
+
+export function useDeletedEmployeeTasks() {
+  return useQuery({
+    queryKey: ["employee-tasks", "deleted"],
+    queryFn: () => api.get<{ data: DeletedEmployeeTask[] }>("/employee-tasks/deleted"),
+    refetchInterval: POLL_MS,
   });
 }
 

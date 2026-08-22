@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import DataTable from "../../components/data-table/DataTable";
 import { PriorityBadge, StatusBadge } from "../../components/ui/Badge";
 import ProgressBar from "../../components/ui/ProgressBar";
-import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import DeleteTaskDialog from "./DeleteTaskDialog";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useAuthStore } from "../../store/authStore";
 import { ApiClientError } from "../../services/apiClient";
 import { useEmployeeTasks, useDeleteEmployeeTask } from "./useEmployeeTasks";
 import { useEmployees, useDepartments } from "../employees/useEmployees";
@@ -40,6 +41,8 @@ export default function EmployeeTasksBoardPage() {
   const canCreate = can("employee-tasks", "create");
   const canUpdate = can("employee-tasks", "update");
   const canDelete = can("employee-tasks", "delete");
+  const roles = useAuthStore((s) => s.user?.roles ?? []);
+  const canViewDeleted = roles.includes("Admin") || roles.includes("CEO");
 
   const rows = useMemo(() => {
     let list = data?.data ?? [];
@@ -68,11 +71,11 @@ export default function EmployeeTasksBoardPage() {
     setFormOpen(true);
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(reason: string) {
     if (!deletingTask) return;
     setError(null);
     try {
-      await deleteTask.mutateAsync(deletingTask.id);
+      await deleteTask.mutateAsync({ id: deletingTask.id, reason });
       setDeletingTask(null);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Could not delete task");
@@ -85,11 +88,21 @@ export default function EmployeeTasksBoardPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Employee Tasks</h1>
-        {canCreate && (
-          <button onClick={openCreate} className="text-sm px-3 py-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white">
-            + New Task
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {canViewDeleted && (
+            <button
+              onClick={() => navigate("/employee-tasks/deleted")}
+              className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Deleted Tasks
+            </button>
+          )}
+          {canCreate && (
+            <button onClick={openCreate} className="text-sm px-3 py-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white">
+              + New Task
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="mb-4 text-sm text-danger-500 bg-danger-100 rounded-md px-3 py-2">{error}</div>}
@@ -232,11 +245,9 @@ export default function EmployeeTasksBoardPage() {
 
       <TaskFormModal open={formOpen} onClose={() => setFormOpen(false)} task={editingTask} />
 
-      <ConfirmDialog
+      <DeleteTaskDialog
         open={!!deletingTask}
-        title="Delete Task"
-        message={`Delete "${deletingTask?.title}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        taskTitle={deletingTask?.title}
         busy={deleteTask.isPending}
         onConfirm={confirmDelete}
         onCancel={() => setDeletingTask(null)}

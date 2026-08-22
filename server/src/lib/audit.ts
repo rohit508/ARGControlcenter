@@ -15,6 +15,7 @@ export async function writeAudit(params: {
   action: "create" | "update" | "delete" | "approve" | "reject" | "login" | "permission_change";
   before?: unknown;
   after?: unknown;
+  reason?: string | null;
   ipAddress?: string | null;
 }) {
   await db.insert(auditLog).values({
@@ -24,6 +25,7 @@ export async function writeAudit(params: {
     action: params.action,
     beforeJson: params.before !== undefined ? JSON.stringify(params.before) : null,
     afterJson: params.after !== undefined ? JSON.stringify(params.after) : null,
+    reason: params.reason ?? null,
     ipAddress: params.ipAddress ?? null,
   });
 }

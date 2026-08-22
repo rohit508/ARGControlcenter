@@ -1,6 +1,6 @@
 import { db } from "../../db/client";
-import { employeeTasks, employeeTaskAssignments, employees, users, comments, notifications, departments } from "../../db/schema";
-import { eq, and, isNull, inArray, SQL } from "drizzle-orm";
+import { employeeTasks, employeeTaskAssignments, employees, users, comments, notifications, departments, auditLog } from "../../db/schema";
+import { eq, and, isNull, isNotNull, inArray, desc, SQL } from "drizzle-orm";
 import { notFound, forbidden } from "../../middleware/errorHandler.middleware";
 import { writeAudit } from "../../lib/audit";
 import { nextCode } from "../../lib/codeGenerator";
@@ -427,7 +427,7 @@ export async function updateTask(id: number, input: UpdateTaskInput, user: Acces
   return getTaskUnchecked(id);
 }
 
-export async function deleteTask(id: number, userId: number) {
+export async function deleteTask(id: number, userId: number, reason: string) {
   const before = (await db.select().from(employeeTasks).where(and(eq(employeeTasks.id, id), isNull(employeeTasks.deletedAt))).limit(1))[0];
   if (!before) throw notFound("Task");
 
@@ -436,7 +436,62 @@ export async function deleteTask(id: number, userId: number) {
     await tx.update(employeeTaskAssignments).set({ deletedAt: new Date() }).where(eq(employeeTaskAssignments.taskId, id));
   });
 
-  await writeAudit({ userId, entityType: "employee-tasks", entityId: id, action: "delete", before });
+  await writeAudit({ userId, entityType: "employee-tasks", entityId: id, action: "delete", before, reason });
+}
+
+// Admin/CEO-only history of soft-deleted tasks — who deleted each one, when, and why. Reuses the
+// same auditLog rows writeAudit() already writes on delete rather than adding a parallel trail.
+export async function listDeletedTasks(user: AccessTokenPayload) {
+  if (!user.roles.includes("Admin") && !user.roles.includes("CEO")) throw forbidden();
+
+  const deletedTasks = await db
+    .select()
+    .from(employeeTasks)
+    .where(isNotNull(employeeTasks.deletedAt))
+    .orderBy(desc(employeeTasks.deletedAt));
+  if (deletedTasks.length === 0) return [];
+
+  const taskIds = deletedTasks.map((t) => t.id);
+  const auditRows = await db
+    .select({
+      entityId: auditLog.entityId,
+      reason: auditLog.reason,
+      createdAt: auditLog.createdAt,
+      deletedByName: employees.fullName,
+    })
+    .from(auditLog)
+    .leftJoin(users, eq(users.id, auditLog.userId))
+    .leftJoin(employees, eq(employees.id, users.employeeId))
+    .where(and(eq(auditLog.entityType, "employee-tasks"), eq(auditLog.action, "delete"), inArray(auditLog.entityId, taskIds)))
+    .orderBy(desc(auditLog.createdAt));
+
+  // Latest delete-audit row per task, in case a task id was ever reused (defensive — ids aren't
+  // recycled in practice, but this keeps the lookup correct if that ever changes).
+  const latestAuditByTaskId = new Map<number, (typeof auditRows)[number]>();
+  for (const row of auditRows) {
+    if (!latestAuditByTaskId.has(row.entityId)) latestAuditByTaskId.set(row.entityId, row);
+  }
+
+  const departmentIds = [...new Set(deletedTasks.map((t) => t.departmentId).filter((id): id is number => id !== null))];
+  const departmentRows = departmentIds.length
+    ? await db.select({ id: departments.id, name: departments.name }).from(departments).where(inArray(departments.id, departmentIds))
+    : [];
+  const departmentNameById = new Map(departmentRows.map((d) => [d.id, d.name]));
+
+  return deletedTasks.map((task) => {
+    const audit = latestAuditByTaskId.get(task.id);
+    return {
+      id: task.id,
+      taskCode: task.taskCode,
+      title: task.title,
+      departmentName: task.departmentId ? departmentNameById.get(task.departmentId) ?? "—" : "—",
+      priority: task.priority,
+      dueDate: task.dueDate,
+      deletedAt: task.deletedAt,
+      deletedByName: audit?.deletedByName ?? "—",
+      reason: audit?.reason ?? "—",
+    };
+  });
 }
 
 async function getAssignmentOrThrow(assignmentId: number) {

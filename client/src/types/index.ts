@@ -132,6 +132,18 @@ export interface EmployeeTask {
   completionPct: number;
 }
 
+export interface DeletedEmployeeTask {
+  id: number;
+  taskCode: string;
+  title: string;
+  departmentName: string;
+  priority: "Critical" | "High" | "Medium" | "Low";
+  dueDate: string | null;
+  deletedAt: string;
+  deletedByName: string;
+  reason: string;
+}
+
 export interface EmployeeTaskComment {
   id: number;
   body: string;

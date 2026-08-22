@@ -26,10 +26,11 @@ export default function DashboardPage() {
     refetchInterval: 15_000,
   });
 
+  const taskStats = taskStatsRes?.data;
+
   if (isLoading) return <div className="text-slate-400">Loading dashboard…</div>;
   if (error) return <div className="text-danger-500">Failed to load dashboard: {(error as Error).message}</div>;
   const k = data!.data;
-  const taskStats = taskStatsRes?.data;
   const employeeTaskStatusData = taskStats ? Object.entries(taskStats.statusCounts).map(([name, value]) => ({ name, value })) : [];
 
   const healthData = [

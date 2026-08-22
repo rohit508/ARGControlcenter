@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as service from "./employee-tasks.service";
-import { createTaskSchema, updateTaskSchema, updateAssignmentStatusSchema, addCommentSchema } from "./employee-tasks.schema";
+import { createTaskSchema, updateTaskSchema, updateAssignmentStatusSchema, addCommentSchema, deleteTaskSchema } from "./employee-tasks.schema";
 import { asyncHandler } from "../../middleware/errorHandler.middleware";
 import { authenticate } from "../../middleware/auth.middleware";
 import { requirePermission, requireRole } from "../../middleware/rbac.middleware";
@@ -36,6 +36,15 @@ router.get(
   })
 );
 
+// Registered before "/:id" for the same reason as "/my-team" and "/stats" above.
+router.get(
+  "/deleted",
+  asyncHandler(async (req, res) => {
+    const data = await service.listDeletedTasks(req.user!);
+    res.json({ data, meta: { total: data.length } });
+  })
+);
+
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -67,7 +76,8 @@ router.delete(
   "/:id",
   requirePermission("employee-tasks", "delete"),
   asyncHandler(async (req, res) => {
-    await service.deleteTask(Number(req.params.id), req.user!.userId);
+    const { reason } = deleteTaskSchema.parse(req.body);
+    await service.deleteTask(Number(req.params.id), req.user!.userId, reason);
     res.status(204).send();
   })
 );

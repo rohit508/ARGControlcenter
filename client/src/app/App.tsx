@@ -4,6 +4,7 @@ import AppShell from "./AppShell";
 import AuthGuard from "./AuthGuard";
 import PermissionGuard from "./PermissionGuard";
 import AdminOnly from "./AdminOnly";
+import AdminOrCeoOnly from "./AdminOrCeoOnly";
 import LoginPage from "../modules/LoginPage";
 import HealthBadge from "../components/data-table/HealthBadge";
 
@@ -27,6 +28,7 @@ const AssetsPage = lazy(() => import("../modules/assets/AssetsPage"));
 const HelpDeskPage = lazy(() => import("../modules/helpdesk/HelpDeskPage"));
 const AnalyticsPage = lazy(() => import("../modules/analytics/AnalyticsPage"));
 const EmployeeTasksBoardPage = lazy(() => import("../modules/employee-tasks/EmployeeTasksBoardPage"));
+const DeletedTasksPage = lazy(() => import("../modules/employee-tasks/DeletedTasksPage"));
 const MyTeamPage = lazy(() => import("../modules/employee-tasks/MyTeamPage"));
 const MyTasksPage = lazy(() => import("../modules/employee-tasks/MyTasksPage"));
 const TicketDetailPage = lazy(() => import("../modules/employee-tasks/TicketDetailPage"));
@@ -78,6 +80,14 @@ export default function App() {
               <PermissionGuard module="employee-tasks" action="create">
                 <EmployeeTasksBoardPage />
               </PermissionGuard>
+            }
+          />
+          <Route
+            path="/employee-tasks/deleted"
+            element={
+              <AdminOrCeoOnly>
+                <DeletedTasksPage />
+              </AdminOrCeoOnly>
             }
           />
           <Route path="/my-team" element={<MyTeamPage />} />

@@ -99,6 +99,7 @@ export const auditLog = pgTable(
     action: text("action").notNull(),
     beforeJson: text("before_json"),
     afterJson: text("after_json"),
+    reason: text("reason"),
     ipAddress: text("ip_address"),
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
