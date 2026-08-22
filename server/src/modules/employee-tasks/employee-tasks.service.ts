@@ -1,5 +1,5 @@
 import { db } from "../../db/client";
-import { employeeTasks, employeeTaskAssignments, employees, users, comments, notifications, departments, auditLog } from "../../db/schema";
+import { employeeTasks, employeeTaskAssignments, employees, users, comments, notifications, departments, auditLog, roles, userRoles } from "../../db/schema";
 import { eq, and, isNull, isNotNull, inArray, desc, SQL } from "drizzle-orm";
 import { notFound, forbidden } from "../../middleware/errorHandler.middleware";
 import { writeAudit } from "../../lib/audit";
@@ -106,6 +106,79 @@ export async function getMyTeam(user: AccessTokenPayload) {
       statusCounts: statusByEmployee.get(m.id) ?? { Pending: 0, "In Progress": 0, Completed: 0, "Not Done": 0, "Completed After Due Date": 0 },
     })),
   };
+}
+
+// Admin/CEO-only company-wide view: every department, its head (if any), and that department's
+// team with the same per-member ticket-status rollup MyTeamPage already shows a DepartmentHead
+// for their own department — generalized here across all departments in one page.
+export async function getAllDepartmentTeams(user: AccessTokenPayload) {
+  if (!user.roles.includes("Admin") && !user.roles.includes("CEO")) throw forbidden();
+
+  const deptRows = await db.select({ id: departments.id, name: departments.name }).from(departments);
+  if (deptRows.length === 0) return [];
+
+  const headRows = await db
+    .select({ departmentId: employees.departmentId, headName: employees.fullName })
+    .from(employees)
+    .innerJoin(users, eq(users.employeeId, employees.id))
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .innerJoin(roles, eq(roles.id, userRoles.roleId))
+    .where(and(eq(roles.name, "DepartmentHead"), isNull(employees.deletedAt)));
+  const headNameByDept = new Map<number, string>();
+  for (const row of headRows) {
+    if (row.departmentId !== null) headNameByDept.set(row.departmentId, row.headName);
+  }
+
+  const allEmployees = await db.select().from(employees).where(isNull(employees.deletedAt));
+  const employeesByDept = new Map<number, typeof allEmployees>();
+  for (const emp of allEmployees) {
+    if (emp.departmentId === null) continue;
+    const list = employeesByDept.get(emp.departmentId) ?? [];
+    list.push(emp);
+    employeesByDept.set(emp.departmentId, list);
+  }
+
+  const allEmployeeIds = allEmployees.map((e) => e.id);
+  const assignmentRows = allEmployeeIds.length
+    ? await db
+        .select({
+          employeeId: employeeTaskAssignments.employeeId,
+          status: employeeTaskAssignments.status,
+          dueDate: employeeTasks.dueDate,
+          dueTime: employeeTasks.dueTime,
+        })
+        .from(employeeTaskAssignments)
+        .innerJoin(employeeTasks, eq(employeeTasks.id, employeeTaskAssignments.taskId))
+        .where(
+          and(
+            inArray(employeeTaskAssignments.employeeId, allEmployeeIds),
+            isNull(employeeTaskAssignments.deletedAt),
+            isNull(employeeTasks.deletedAt)
+          )
+        )
+    : [];
+
+  const now = new Date();
+  const statusByEmployee = new Map<number, Record<string, number>>();
+  for (const row of assignmentRows) {
+    const effective = getEffectiveStatus(row.status, row.dueDate, row.dueTime, now);
+    const bucket = statusByEmployee.get(row.employeeId) ?? { Pending: 0, "In Progress": 0, Completed: 0, "Not Done": 0, "Completed After Due Date": 0 };
+    bucket[effective] = (bucket[effective] ?? 0) + 1;
+    statusByEmployee.set(row.employeeId, bucket);
+  }
+
+  return deptRows.map((dept) => ({
+    departmentId: dept.id,
+    departmentName: dept.name,
+    headName: headNameByDept.get(dept.id) ?? null,
+    members: (employeesByDept.get(dept.id) ?? []).map((m) => ({
+      id: m.id,
+      fullName: m.fullName,
+      roleTitle: m.roleTitle,
+      email: m.email,
+      statusCounts: statusByEmployee.get(m.id) ?? { Pending: 0, "In Progress": 0, Completed: 0, "Not Done": 0, "Completed After Due Date": 0 },
+    })),
+  }));
 }
 
 // The cutoff a "Pending"/"In Progress" assignment must cross before it's considered overdue.
@@ -478,8 +551,24 @@ export async function listDeletedTasks(user: AccessTokenPayload) {
     : [];
   const departmentNameById = new Map(departmentRows.map((d) => [d.id, d.name]));
 
+  // deleteTask() soft-deletes the assignment rows alongside the task itself, so they're fetched
+  // here without an isNull(deletedAt) filter — that's expected for every row on a deleted task,
+  // not a sign anything else went wrong.
+  const assigneeRows = await db
+    .select({ taskId: employeeTaskAssignments.taskId, employeeName: employees.fullName })
+    .from(employeeTaskAssignments)
+    .innerJoin(employees, eq(employees.id, employeeTaskAssignments.employeeId))
+    .where(inArray(employeeTaskAssignments.taskId, taskIds));
+  const assigneeNamesByTaskId = new Map<number, string[]>();
+  for (const row of assigneeRows) {
+    const list = assigneeNamesByTaskId.get(row.taskId) ?? [];
+    list.push(row.employeeName);
+    assigneeNamesByTaskId.set(row.taskId, list);
+  }
+
   return deletedTasks.map((task) => {
     const audit = latestAuditByTaskId.get(task.id);
+    const assigneeNames = assigneeNamesByTaskId.get(task.id) ?? [];
     return {
       id: task.id,
       taskCode: task.taskCode,
@@ -487,6 +576,7 @@ export async function listDeletedTasks(user: AccessTokenPayload) {
       departmentName: task.departmentId ? departmentNameById.get(task.departmentId) ?? "—" : "—",
       priority: task.priority,
       dueDate: task.dueDate,
+      assignedTo: assigneeNames.length > 0 ? assigneeNames.join(", ") : "—",
       deletedAt: task.deletedAt,
       deletedByName: audit?.deletedByName ?? "—",
       reason: audit?.reason ?? "—",

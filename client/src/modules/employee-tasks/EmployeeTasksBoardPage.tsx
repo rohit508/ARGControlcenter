@@ -91,6 +91,14 @@ export default function EmployeeTasksBoardPage() {
         <div className="flex items-center gap-2">
           {canViewDeleted && (
             <button
+              onClick={() => navigate("/employee-tasks/department-teams")}
+              className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Department Head
+            </button>
+          )}
+          {canViewDeleted && (
+            <button
               onClick={() => navigate("/employee-tasks/deleted")}
               className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
             >

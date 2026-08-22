@@ -29,6 +29,7 @@ const HelpDeskPage = lazy(() => import("../modules/helpdesk/HelpDeskPage"));
 const AnalyticsPage = lazy(() => import("../modules/analytics/AnalyticsPage"));
 const EmployeeTasksBoardPage = lazy(() => import("../modules/employee-tasks/EmployeeTasksBoardPage"));
 const DeletedTasksPage = lazy(() => import("../modules/employee-tasks/DeletedTasksPage"));
+const DepartmentTeamsPage = lazy(() => import("../modules/employee-tasks/DepartmentTeamsPage"));
 const MyTeamPage = lazy(() => import("../modules/employee-tasks/MyTeamPage"));
 const MyTasksPage = lazy(() => import("../modules/employee-tasks/MyTasksPage"));
 const TicketDetailPage = lazy(() => import("../modules/employee-tasks/TicketDetailPage"));
@@ -87,6 +88,14 @@ export default function App() {
             element={
               <AdminOrCeoOnly>
                 <DeletedTasksPage />
+              </AdminOrCeoOnly>
+            }
+          />
+          <Route
+            path="/employee-tasks/department-teams"
+            element={
+              <AdminOrCeoOnly>
+                <DepartmentTeamsPage />
               </AdminOrCeoOnly>
             }
           />

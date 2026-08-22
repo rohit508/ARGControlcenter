@@ -139,6 +139,7 @@ export interface DeletedEmployeeTask {
   departmentName: string;
   priority: "Critical" | "High" | "Medium" | "Low";
   dueDate: string | null;
+  assignedTo: string;
   deletedAt: string;
   deletedByName: string;
   reason: string;
@@ -194,6 +195,13 @@ export interface MyTeamMember {
 export interface MyTeam {
   departmentId: number | null;
   departmentName: string | null;
+  members: MyTeamMember[];
+}
+
+export interface DepartmentTeam {
+  departmentId: number;
+  departmentName: string;
+  headName: string | null;
   members: MyTeamMember[];
 }
 

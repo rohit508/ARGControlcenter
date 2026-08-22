@@ -45,6 +45,15 @@ router.get(
   })
 );
 
+// Registered before "/:id" for the same reason as "/my-team" and "/stats" above.
+router.get(
+  "/department-teams",
+  asyncHandler(async (req, res) => {
+    const data = await service.getAllDepartmentTeams(req.user!);
+    res.json({ data, meta: { total: data.length } });
+  })
+);
+
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {

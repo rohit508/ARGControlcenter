@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../services/apiClient";
-import { Attachment, DeletedEmployeeTask, EmployeeTask, EmployeeTaskAssignment, EmployeeTaskComment, EmployeeTaskStats, MyTeam } from "../../types";
+import { Attachment, DeletedEmployeeTask, DepartmentTeam, EmployeeTask, EmployeeTaskAssignment, EmployeeTaskComment, EmployeeTaskStats, MyTeam } from "../../types";
 
 // Real-time is polling-based in this app (no WebSocket/SSE infra exists) — a ~15s refetch plus
 // immediate invalidation right after any mutation keeps the board and dashboard current without
@@ -43,6 +43,14 @@ export function useMyTeam(enabled: boolean = true) {
     queryFn: () => api.get<{ data: MyTeam }>("/employee-tasks/my-team"),
     refetchInterval: POLL_MS,
     enabled,
+  });
+}
+
+export function useDepartmentTeams() {
+  return useQuery({
+    queryKey: ["employee-tasks", "department-teams"],
+    queryFn: () => api.get<{ data: DepartmentTeam[] }>("/employee-tasks/department-teams"),
+    refetchInterval: POLL_MS,
   });
 }
 

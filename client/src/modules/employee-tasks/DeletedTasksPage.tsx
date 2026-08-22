@@ -100,6 +100,7 @@ export default function DeletedTasksPage() {
           { key: "title", header: "Title" },
           { key: "departmentName", header: "Department" },
           { key: "priority", header: "Priority", render: (r) => <PriorityBadge priority={r.priority} /> },
+          { key: "assignedTo", header: "Assigned To" },
           { key: "deletedByName", header: "Deleted By" },
           { key: "deletedAt", header: "Deleted At", render: (r) => formatDateTime(r.deletedAt) },
           { key: "reason", header: "Reason", render: (r: DeletedEmployeeTask) => <ReasonNote reason={r.reason} /> },
