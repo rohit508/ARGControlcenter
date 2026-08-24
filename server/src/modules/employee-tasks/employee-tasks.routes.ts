@@ -13,7 +13,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
     const departmentId = req.query.departmentId ? Number(req.query.departmentId) : undefined;
-    const data = await service.listTasks(req.user!, { employeeId, departmentId });
+    const viewScope = req.query.viewScope === "all" || req.query.viewScope === "my-team" ? req.query.viewScope : undefined;
+    const data = await service.listTasks(req.user!, { employeeId, departmentId, viewScope });
     res.json({ data, meta: { total: data.length } });
   })
 );
@@ -32,7 +33,8 @@ router.get(
   "/stats",
   asyncHandler(async (req, res) => {
     const employeeId = req.query.employeeId && !Number.isNaN(Number(req.query.employeeId)) ? Number(req.query.employeeId) : undefined;
-    res.json({ data: await service.getStats(req.user!, { employeeId }) });
+    const viewScope = req.query.viewScope === "all" || req.query.viewScope === "my-team" ? req.query.viewScope : undefined;
+    res.json({ data: await service.getStats(req.user!, { employeeId, viewScope }) });
   })
 );
 

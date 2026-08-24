@@ -23,11 +23,12 @@ export interface UpdateStatusPayload {
   progressNotes?: string;
 }
 
-export function useEmployeeTasks(employeeId?: number, departmentId?: number) {
-  const queryKey = ["employee-tasks", { employeeId, departmentId }];
+export function useEmployeeTasks(employeeId?: number, departmentId?: number, viewScope?: "all" | "my-team") {
+  const queryKey = ["employee-tasks", { employeeId, departmentId, viewScope }];
   const params = new URLSearchParams();
   if (employeeId) params.set("employeeId", String(employeeId));
   if (departmentId) params.set("departmentId", String(departmentId));
+  if (viewScope) params.set("viewScope", viewScope);
   const qs = params.toString();
   const path = qs ? `/employee-tasks?${qs}` : "/employee-tasks";
   return useQuery({
@@ -54,9 +55,13 @@ export function useDepartmentTeams() {
   });
 }
 
-export function useEmployeeTaskStats(employeeId?: number) {
-  const queryKey = employeeId ? ["employee-tasks", "stats", "employee", employeeId] : ["employee-tasks", "stats"];
-  const path = employeeId ? `/employee-tasks/stats?employeeId=${employeeId}` : "/employee-tasks/stats";
+export function useEmployeeTaskStats(employeeId?: number, viewScope?: "all" | "my-team") {
+  const queryKey = ["employee-tasks", "stats", { employeeId, viewScope }];
+  const params = new URLSearchParams();
+  if (employeeId) params.set("employeeId", String(employeeId));
+  if (viewScope) params.set("viewScope", viewScope);
+  const qs = params.toString();
+  const path = qs ? `/employee-tasks/stats?${qs}` : "/employee-tasks/stats";
   return useQuery({
     queryKey,
     queryFn: () => api.get<{ data: EmployeeTaskStats }>(path),

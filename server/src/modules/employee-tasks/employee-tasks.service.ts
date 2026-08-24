@@ -260,16 +260,28 @@ function withAggregate(
   };
 }
 
-export async function listTasks(user: AccessTokenPayload, opts?: { employeeId?: number; departmentId?: number }) {
+export async function listTasks(user: AccessTokenPayload, opts?: { employeeId?: number; departmentId?: number; viewScope?: "all" | "my-team" }) {
   const filterEmployeeId = opts?.employeeId;
   const filterDepartmentId = opts?.departmentId;
   const deptNames = await departmentNamesById();
 
+  // Some seeded accounts (e.g. Asad Ali) hold Admin/CEO *and* DepartmentHead at once — a real
+  // person who legitimately wants both "see everything" and "see just my team" views depending
+  // on context. viewScope=all is how that person opts into the Admin/CEO-wide view instead of
+  // silently falling into the DepartmentHead branch below.
+  //
+  // Deliberately checks user.roles directly rather than canManageAllTasks(), which only tests
+  // the "employee-tasks:create" permission — DepartmentHead is *also* granted that permission (so
+  // they can raise tickets for their own team), so canManageAllTasks() alone can't tell a real
+  // Admin/CEO apart from a plain DepartmentHead. Using it here let any DepartmentHead pass
+  // viewScope=all and see every other department's tickets, not just their own.
+  const wantsAllView = opts?.viewScope === "all" && (user.roles.includes("Admin") || user.roles.includes("CEO"));
+
   // DepartmentHead is checked before canManageAllTasks even though they now also hold the
   // "employee-tasks:create" grant (needed so they can raise tickets) — without this ordering
   // they'd fall into the "sees everything" branch below and see every department's tickets,
-  // not just their own team's.
-  if (await isDepartmentHead(user)) {
+  // not just their own team's. wantsAllView above is the one explicit escape hatch from that.
+  if (!wantsAllView && (await isDepartmentHead(user))) {
     const departmentId = await getCallerDepartmentId(user.userId);
     if (!departmentId) return [];
     const teamEmployeeIds = await getTeamEmployeeIds(departmentId);
@@ -753,12 +765,17 @@ const EMPTY_STATS = {
   weeklyTrend: [],
 };
 
-export async function getStats(user: AccessTokenPayload, opts?: { employeeId?: number }) {
+export async function getStats(user: AccessTokenPayload, opts?: { employeeId?: number; viewScope?: "all" | "my-team" }) {
   const requestedEmployeeId = opts?.employeeId;
+
+  // See listTasks()'s wantsAllView for why this checks roles directly rather than
+  // canManageAllTasks()/canViewAllTaskStats() — DepartmentHead also passes those, so either would
+  // let a plain DepartmentHead escape their team scope via viewScope=all.
+  const wantsAllView = opts?.viewScope === "all" && (user.roles.includes("Admin") || user.roles.includes("CEO"));
 
   // DepartmentHead's "manage all" grant (needed to raise tickets) must not translate into
   // company-wide analytics — scope to the team instead, same as listTasks/getTask above.
-  if (await isDepartmentHead(user)) {
+  if (!wantsAllView && (await isDepartmentHead(user))) {
     const departmentId = await getCallerDepartmentId(user.userId);
     const teamEmployeeIds = departmentId ? await getTeamEmployeeIds(departmentId) : [];
     if (teamEmployeeIds.length === 0) return EMPTY_STATS;

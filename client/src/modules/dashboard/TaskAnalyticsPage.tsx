@@ -41,17 +41,31 @@ export default function TaskAnalyticsPage() {
   const isDepartmentHead = user?.roles.includes("DepartmentHead") ?? false;
   const canFilterByEmployee = isAdminOrCeo || isDepartmentHead;
 
-  // Admin/CEO get the full roster; DepartmentHead gets only their own team.
-  const { data: employeesQuery, isLoading: employeesLoading } = useEmployees({}, { enabled: isAdminOrCeo });
-  const { data: myTeamQuery, isLoading: myTeamLoading } = useMyTeam(isDepartmentHead);
-  const filterOptions = isAdminOrCeo
+  // An account that holds both an Admin/CEO role and DepartmentHead (e.g. a Group Director who
+  // also heads a department) needs to choose which view they're in — same toggle and reasoning as
+  // EmployeeTasksBoardPage's canToggleViewScope. Hidden for everyone else: it wouldn't change
+  // anything for a plain Admin/CEO (already "all" by default) or a plain DepartmentHead (backend
+  // ignores viewScope=all unless the caller actually holds Admin/CEO).
+  const canToggleViewScope = isAdminOrCeo && isDepartmentHead;
+  const [viewScope, setViewScope] = useState<"all" | "my-team">("my-team");
+  const effectiveViewScope = canToggleViewScope ? viewScope : undefined;
+  // Whichever view is in effect determines which roster the Employee dropdown offers: the full
+  // company for "all", just this head's own team for "my-team" — never both at once, so the
+  // selected employee is always someone actually visible in the current view.
+  const showAllRoster = isAdminOrCeo && (!canToggleViewScope || viewScope === "all");
+  const showTeamRoster = isDepartmentHead && (!canToggleViewScope || viewScope === "my-team");
+
+  const { data: employeesQuery, isLoading: employeesLoading } = useEmployees({}, { enabled: showAllRoster });
+  const { data: myTeamQuery, isLoading: myTeamLoading } = useMyTeam(showTeamRoster);
+  const filterOptions = showAllRoster
     ? employeesQuery?.data ?? []
     : (myTeamQuery?.data.members ?? []).map((m) => ({ id: m.id, fullName: m.fullName }));
   const { data, isLoading, error } = useEmployeeTaskStats(
-    canFilterByEmployee && selectedEmployeeId ? Number(selectedEmployeeId) : undefined
+    canFilterByEmployee && selectedEmployeeId ? Number(selectedEmployeeId) : undefined,
+    effectiveViewScope
   );
 
-  const loading = isLoading || (isAdminOrCeo && employeesLoading) || (isDepartmentHead && myTeamLoading);
+  const loading = isLoading || (showAllRoster && employeesLoading) || (showTeamRoster && myTeamLoading);
   if (loading) return <div className="text-slate-400">Loading…</div>;
   if (error)
     return (
@@ -85,25 +99,43 @@ export default function TaskAnalyticsPage() {
             </p>
           </div>
 
-          {canFilterByEmployee && (
-            <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">
-                Employee
-              </label>
-              <select
-                className="min-w-[220px] rounded-2xl border border-white/0 bg-white px-4 py-3 text-sm text-slate-700 shadow-lg transition duration-200 ease-in-out hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-white/60"
-                value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
-              >
-                <option value="">All Employees</option>
-                {filterOptions.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex flex-wrap items-end gap-4">
+            {canToggleViewScope && (
+              <div>
+                <label className="block text-sm font-medium text-white/90 mb-2">View</label>
+                <select
+                  className="min-w-[200px] rounded-2xl border border-white/0 bg-white px-4 py-3 text-sm text-slate-700 shadow-lg transition duration-200 ease-in-out hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-white/60"
+                  value={viewScope}
+                  onChange={(e) => {
+                    setViewScope(e.target.value as "all" | "my-team");
+                    setSelectedEmployeeId(""); // previous selection may not exist in the new roster
+                  }}
+                >
+                  <option value="all">View: All Departments</option>
+                  <option value="my-team">View: My Department Only</option>
+                </select>
+              </div>
+            )}
+            {canFilterByEmployee && (
+              <div>
+                <label className="block text-sm font-medium text-white/90 mb-2">
+                  Employee
+                </label>
+                <select
+                  className="min-w-[220px] rounded-2xl border border-white/0 bg-white px-4 py-3 text-sm text-slate-700 shadow-lg transition duration-200 ease-in-out hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-white/60"
+                  value={selectedEmployeeId}
+                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                >
+                  <option value="">All Employees</option>
+                  {filterOptions.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

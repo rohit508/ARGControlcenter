@@ -24,9 +24,20 @@ export default function EmployeeTasksBoardPage() {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
   const { data: employeeData } = useEmployees();
   const { data: departmentData } = useDepartments();
+  const roles = useAuthStore((s) => s.user?.roles ?? []);
+  const canViewDeleted = roles.includes("Admin") || roles.includes("CEO");
+  // Some accounts (e.g. a Group Director who is also a Department Head) hold both an
+  // Admin/CEO-level role and DepartmentHead at once — the backend defaults that combination to
+  // the narrower "my team only" view, so this toggle is their way to explicitly ask for
+  // everything instead. Hidden for everyone else since it wouldn't do anything for them: a plain
+  // Admin/CEO already sees all data by default, and a plain DepartmentHead can't unlock other
+  // departments' tickets with it.
+  const canToggleViewScope = canViewDeleted && roles.includes("DepartmentHead");
+  const [viewScope, setViewScope] = useState<"all" | "my-team">("my-team");
   const { data, isLoading } = useEmployeeTasks(
     selectedEmployeeId ? Number(selectedEmployeeId) : undefined,
-    selectedDepartmentId ? Number(selectedDepartmentId) : undefined
+    selectedDepartmentId ? Number(selectedDepartmentId) : undefined,
+    canToggleViewScope ? viewScope : undefined
   );
   const deleteTask = useDeleteEmployeeTask();
 
@@ -41,8 +52,6 @@ export default function EmployeeTasksBoardPage() {
   const canCreate = can("employee-tasks", "create");
   const canUpdate = can("employee-tasks", "update");
   const canDelete = can("employee-tasks", "delete");
-  const roles = useAuthStore((s) => s.user?.roles ?? []);
-  const canViewDeleted = roles.includes("Admin") || roles.includes("CEO");
 
   const rows = useMemo(() => {
     let list = data?.data ?? [];
@@ -168,6 +177,17 @@ export default function EmployeeTasksBoardPage() {
           <option value="completionPct">Sort: Completion</option>
           <option value="title">Sort: Title</option>
         </select>
+        {canToggleViewScope && (
+          <select
+            className="rounded-md border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-sm"
+            value={viewScope}
+            onChange={(e) => setViewScope(e.target.value as "all" | "my-team")}
+            title="You hold both an Admin/CEO role and Department Head — choose which set of tickets to view"
+          >
+            <option value="all">View: All Departments</option>
+            <option value="my-team">View: My Department Only</option>
+          </select>
+        )}
       </div>
 
       <DataTable
