@@ -157,6 +157,23 @@ function passwordFor(loginEmail: string): string {
 async function main() {
   console.log("Seeding database...");
 
+  // ---- refuse to wipe a database that already has real data ----
+  // deploy-start.sh is supposed to gate this by only calling seed on a confirmed-fresh database,
+  // but that check has failed before (a transient connection error was misread as "empty DB",
+  // and this script then TRUNCATEd a live production database). This is the last line of defense
+  // for any path that reaches this script — automated or a person running it by hand against the
+  // wrong DATABASE_URL — regardless of how it got invoked.
+  const existing = await pool.query("SELECT 1 FROM users LIMIT 1").catch(() => null);
+  if (existing && existing.rowCount && existing.rowCount > 0 && process.env.SEED_FORCE !== "true") {
+    console.error(
+      "Refusing to seed: the `users` table already has data. This script TRUNCATEs and " +
+        "replaces all data — running it against a database with real data would destroy it.\n" +
+        "If you are certain you want to wipe this database (e.g. resetting a local/dev/staging " +
+        "environment on purpose), re-run with SEED_FORCE=true."
+    );
+    process.exit(1);
+  }
+
   // ---- wipe existing data (idempotent re-seed for dev) ----
   const tableNames = [
     "tickets", "kb_articles",
