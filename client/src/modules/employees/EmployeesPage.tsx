@@ -6,6 +6,7 @@ import { ApiClientError } from "../../services/apiClient";
 import { useEmployees, useDeleteEmployee } from "./useEmployees";
 import EmployeeFormModal from "./EmployeeFormModal";
 import { Employee } from "../../types";
+import { roleDisplayLabels } from "../../utils/roleLabels";
 
 type SortKey = "name" | "department" | "status";
 
@@ -129,7 +130,7 @@ export default function EmployeesPage() {
           {
             key: "roles",
             header: "Roles",
-            render: (r) => (r.roles.length > 0 ? <span className="text-xs">{r.roles.map((role) => role.name).join(", ")}</span> : <span className="text-xs text-slate-400">—</span>),
+            render: (r) => (r.roles.length > 0 ? <span className="text-xs">{roleDisplayLabels(r.roles.map((role) => role.name))}</span> : <span className="text-xs text-slate-400">—</span>),
           },
           {
             key: "actions",

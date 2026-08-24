@@ -7,6 +7,7 @@ import { pendingCount } from "../services/syncEngine";
 import NotificationBell from "../components/ui/NotificationBell";
 import Toast from "../components/ui/Toast";
 import { useEmployeeTaskStats, useEmployeeTasks } from "../modules/employee-tasks/useEmployeeTasks";
+import { roleDisplayLabels } from "../utils/roleLabels";
 
 // Admin's primary workflow group — must render first, in this exact order, per product spec.
 // Items here are active for Admin; every other nav item is rendered visible-but-disabled (gray,
@@ -269,7 +270,7 @@ export default function AppShell() {
             </button>
             <div className="text-sm text-right">
               <div className="font-medium">{user?.email}</div>
-              <div className="text-xs text-slate-400">{user?.roles.join(", ")}</div>
+              <div className="text-xs text-slate-400">{roleDisplayLabels(user?.roles ?? [])}</div>
             </div>
             <button onClick={logout} className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800">
               Sign out
