@@ -3,7 +3,7 @@ import Modal from "../../components/ui/Modal";
 import { ApiClientError } from "../../services/apiClient";
 import { useCreateEmployee, useUpdateEmployee, useCreateLoginForEmployee, useUpdateEmployeeRoles, useDepartments, useRoles } from "./useEmployees";
 import { Employee } from "../../types";
-import { roleDisplayLabel } from "../../utils/roleLabels";
+import { roleDisplayLabelForEmployee } from "../../utils/roleLabels";
 
 interface Props {
   open: boolean;
@@ -204,7 +204,7 @@ export default function EmployeeFormModal({ open, onClose, employee }: Props) {
               {roles.map((r) => (
                 <label key={r.id} className="flex items-center gap-2 text-sm px-1 py-0.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
                   <input type="checkbox" checked={roleIds.includes(r.id)} onChange={() => toggleRole(r.id)} />
-                  {roleDisplayLabel(r.name)}
+                  {roleDisplayLabelForEmployee(r.name, employee?.fullName)}
                 </label>
               ))}
             </div>

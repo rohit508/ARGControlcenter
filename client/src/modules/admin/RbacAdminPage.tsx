@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiClientError } from "../../services/apiClient";
-import { roleDisplayLabel } from "../../utils/roleLabels";
 
 interface Role {
   id: number;
@@ -104,7 +103,7 @@ export default function RbacAdminPage() {
                   selectedRoleId === r.id ? "bg-brand-600 text-white" : "hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
               >
-                {roleDisplayLabel(r.name)}
+                {r.name}
               </button>
             ))}
           </div>
