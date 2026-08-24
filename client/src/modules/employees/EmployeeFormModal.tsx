@@ -169,6 +169,15 @@ export default function EmployeeFormModal({ open, onClose, employee }: Props) {
               <input type="checkbox" checked={createLoginNow} onChange={(e) => setCreateLoginNow(e.target.checked)} />
               Create login for this employee
             </label>
+            {!createLoginNow && (
+              // Roles (DepartmentHead, Admin, etc.) attach to a login/user account, not the
+              // employee record — this employee has no login yet, so the Roles section below
+              // stays hidden until one is created. Without this note, "check this box to create
+              // a login" reads unrelated to "I want to grant this person a role."
+              <div className="text-xs text-slate-400 mt-1">
+                This employee has no login yet, so roles (including Department Head) can't be assigned. Check this box to create one.
+              </div>
+            )}
             {createLoginNow && (
               <div className="grid grid-cols-2 gap-4 mt-3">
                 <div>
