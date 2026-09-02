@@ -52,7 +52,7 @@ function Icon({
 }) {
   return (
     <span
-      className={`inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl ${className}`}
+      className={`inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl transition-transform duration-300 ease-out group-hover:scale-105 ${className}`}
     >
       {children}
     </span>
@@ -84,7 +84,7 @@ function Card({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_18px_rgba(15,23,42,.055)] transition-shadow duration-200 hover:shadow-[0_10px_25px_rgba(15,23,42,.075)] ${className}`}
+      className={`group rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_18px_rgba(15,23,42,.055)] transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_16px_34px_rgba(15,118,110,.16)] ${className}`}
     >
       {children}
     </section>
