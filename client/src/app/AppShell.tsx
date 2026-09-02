@@ -107,7 +107,6 @@ export default function AppShell() {
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const navigate = useNavigate();
-  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -144,12 +143,12 @@ export default function AppShell() {
   // actually load before showing the toast, so the count in it is never a stale/zero flash.
   const [loginToastPending, setLoginToastPending] = useState(false);
   const [showLoginToast, setShowLoginToast] = useState(false);
-  const { data: taskStatsRes } = useEmployeeTaskStats(undefined, undefined, !isDemoMode);
+  const { data: taskStatsRes } = useEmployeeTaskStats();
   // Mounted here (not just on the pages that display the list) so /employee-tasks fires
   // immediately after sign-in too, same as the stats call above — regardless of which page the
   // user lands on post-login. React Query dedupes this against the same query key already
   // in flight on whichever page also calls useEmployeeTasks(), so it's not a duplicate request.
-  useEmployeeTasks(undefined, undefined, undefined, !isDemoMode);
+  useEmployeeTasks();
   useEffect(() => {
     if (sessionStorage.getItem("erp-just-logged-in") === "1") {
       sessionStorage.removeItem("erp-just-logged-in");
