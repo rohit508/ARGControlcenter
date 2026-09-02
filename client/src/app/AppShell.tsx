@@ -19,6 +19,7 @@ const ADMIN_PRIMARY_PATHS = [
   "/admin/configuration",
   "/employees",
   "/admin/rbac",
+  "/hr-dashboard",
 ];
 
 const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: string[] }[] }[] = [
@@ -77,7 +78,10 @@ const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: s
   },
   {
     label: "HR",
-    items: [{ to: "/leave-requests", label: "Leave Requests", roles: ["HR"] }],
+    items: [
+      { to: "/hr-dashboard", label: "HR Dashboard", roles: ["HR", "CEO", "Admin"] },
+      { to: "/leave-requests", label: "Leave Requests", roles: ["HR"] },
+    ],
   },
   {
     label: "Operations",
@@ -103,6 +107,7 @@ export default function AppShell() {
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const navigate = useNavigate();
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -139,12 +144,12 @@ export default function AppShell() {
   // actually load before showing the toast, so the count in it is never a stale/zero flash.
   const [loginToastPending, setLoginToastPending] = useState(false);
   const [showLoginToast, setShowLoginToast] = useState(false);
-  const { data: taskStatsRes } = useEmployeeTaskStats();
+  const { data: taskStatsRes } = useEmployeeTaskStats(undefined, undefined, !isDemoMode);
   // Mounted here (not just on the pages that display the list) so /employee-tasks fires
   // immediately after sign-in too, same as the stats call above — regardless of which page the
   // user lands on post-login. React Query dedupes this against the same query key already
   // in flight on whichever page also calls useEmployeeTasks(), so it's not a duplicate request.
-  useEmployeeTasks();
+  useEmployeeTasks(undefined, undefined, undefined, !isDemoMode);
   useEffect(() => {
     if (sessionStorage.getItem("erp-just-logged-in") === "1") {
       sessionStorage.removeItem("erp-just-logged-in");
