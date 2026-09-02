@@ -9,7 +9,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import Dropdown from "../../components/ui/Dropdown";
 
 const attendance = [
   { name: "Present", value: 1056, color: "#159C94" },
@@ -91,6 +92,10 @@ function Card({
 }
 
 export default function HrDashboardPage() {
+  const [openMenu, setOpenMenu] = useState<"period" | "scope" | null>(null);
+  const [period, setPeriod] = useState("This month");
+  const [scope, setScope] = useState("All campuses / departments");
+
   return (
     <div className="mx-auto max-w-[1540px] space-y-5 pb-8 text-slate-800">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -106,32 +111,180 @@ export default function HrDashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Dropdown
+            value={period}
+            onChange={setPeriod}
+            menuLabel="Reporting period"
+            ariaLabel="Choose reporting period"
+            className="w-[190px]"
+            icon={
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="2.5"
+                  y="3.5"
+                  width="11"
+                  height="10"
+                  rx="1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M5 2.5v2M11 2.5v2M2.5 6.5h11M5.25 9h.01M8 9h.01M10.75 9h.01M5.25 11.25h.01M8 11.25h.01"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            }
+            options={[
+              { value: "This week", label: "This week" },
+              { value: "This month", label: "This month" },
+              { value: "This quarter", label: "This quarter" },
+              { value: "This year", label: "This year" },
+            ]}
+          />
+          <Dropdown
+            value={scope}
+            onChange={setScope}
+            menuLabel="Organization scope"
+            ariaLabel="Choose campus or department"
+            className="w-[300px]"
+            icon={
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 13.5V4.25c0-.69.56-1.25 1.25-1.25h5.5c.69 0 1.25.56 1.25 1.25v9.25M1.75 13.5h12.5M5.25 5.5h1M8.75 5.5h1M5.25 8h1M8.75 8h1M5.25 10.5h1M8.75 10.5h1"
+                  stroke="currentColor"
+                  strokeWidth="1.35"
+                  strokeLinecap="round"
+                />
+              </svg>
+            }
+            align="right"
+            options={[
+              {
+                value: "All campuses / departments",
+                label: "All campuses / departments",
+              },
+              { value: "Head Office", label: "Head Office" },
+              { value: "North Campus", label: "North Campus" },
+              {
+                value: "Operations department",
+                label: "Operations department",
+              },
+            ]}
+          />
+          <button
+            type="button"
+            aria-label="Export HR report"
+            className="group inline-flex h-12 items-center gap-2 rounded-xl border border-teal-600 bg-teal-600 px-4 text-sm font-semibold text-white shadow-[0_5px_14px_rgba(13,148,136,.22)] transition-all duration-200 hover:-translate-y-px hover:bg-teal-700 hover:shadow-[0_9px_20px_rgba(13,148,136,.28)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/25 focus-visible:ring-offset-2 active:translate-y-0 active:scale-[.98]"
+          >
+            <svg
+              className="h-4 w-4 transition-transform group-hover:translate-y-0.5"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M8 2v8m0 0 3-3m-3 3L5 7M3 12.5v1h10v-1"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Export</span>
+          </button>
+        </div>
+        <div className="hidden">
           <button
             type="button"
             aria-label="Choose reporting period"
+            aria-expanded={openMenu === "period"}
+            onClick={() => setOpenMenu(openMenu === "period" ? null : "period")}
             className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_2px_6px_rgba(15,23,42,.04)] transition-all duration-200 hover:-translate-y-px hover:border-teal-200 hover:bg-teal-50/40 hover:text-teal-700 hover:shadow-[0_8px_18px_rgba(15,118,110,.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/15 focus-visible:border-teal-500 active:translate-y-0 active:scale-[.98]"
           >
             <span className="grid h-5 w-5 place-items-center rounded-md bg-slate-100 text-[11px] text-slate-500 transition-colors group-hover:bg-teal-100 group-hover:text-teal-700">
               ▣
             </span>
-            <span>This month</span>
+            <span>{period}</span>
             <span className="text-xs text-slate-400 transition-transform group-hover:translate-y-px">
               ⌄
             </span>
           </button>
+          {openMenu === "period" && (
+            <div className="absolute left-0 top-full z-30 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_16px_32px_rgba(15,23,42,.14)]">
+              <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Reporting period
+              </p>
+              {["This week", "This month", "This quarter", "This year"].map(
+                (option) => (
+                  <button
+                    type="button"
+                    key={option}
+                    onClick={() => {
+                      setPeriod(option);
+                      setOpenMenu(null);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30 ${period === option ? "bg-teal-50 font-semibold text-teal-700" : "text-slate-600"}`}
+                  >
+                    {option}
+                    {period === option && <span>✓</span>}
+                  </button>
+                ),
+              )}
+            </div>
+          )}
           <button
             type="button"
             aria-label="Choose campus or department"
+            aria-expanded={openMenu === "scope"}
+            onClick={() => setOpenMenu(openMenu === "scope" ? null : "scope")}
             className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_2px_6px_rgba(15,23,42,.04)] transition-all duration-200 hover:-translate-y-px hover:border-teal-200 hover:bg-teal-50/40 hover:text-teal-700 hover:shadow-[0_8px_18px_rgba(15,118,110,.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/15 focus-visible:border-teal-500 active:translate-y-0 active:scale-[.98]"
           >
             <span className="grid h-5 w-5 place-items-center rounded-md bg-slate-100 text-[11px] text-slate-500 transition-colors group-hover:bg-teal-100 group-hover:text-teal-700">
               ⌂
             </span>
-            <span>All campuses / departments</span>
+            <span>{scope}</span>
             <span className="text-xs text-slate-400 transition-transform group-hover:translate-y-px">
               ⌄
             </span>
           </button>
+          {openMenu === "scope" && (
+            <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_16px_32px_rgba(15,23,42,.14)]">
+              <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Organization scope
+              </p>
+              {[
+                "All campuses / departments",
+                "Head Office",
+                "North Campus",
+                "Operations department",
+              ].map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  onClick={() => {
+                    setScope(option);
+                    setOpenMenu(null);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30 ${scope === option ? "bg-teal-50 font-semibold text-teal-700" : "text-slate-600"}`}
+                >
+                  {option}
+                  {scope === option && <span>✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             type="button"
             aria-label="Export HR report"
@@ -234,7 +387,7 @@ export default function HrDashboardPage() {
           </p>
         </Card>
         <Card className="xl:col-span-4">
-          <Header title="Attendance trend" right="This week  ⌄" />
+          <Header title="Attendance trend" />
           <div className="h-[235px] pt-3">
             <ResponsiveContainer>
               <LineChart
@@ -315,7 +468,7 @@ export default function HrDashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <Card className="xl:col-span-4">
-          <Header title="Department attendance" right="This month  ⌄" />{" "}
+          <Header title="Department attendance" />{" "}
           <div className="mt-4 space-y-2.5">
             {departments.map(([name, value]) => (
               <div
@@ -427,7 +580,7 @@ export default function HrDashboardPage() {
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <Card>
-          <Header title="Payroll readiness" right="This month  ⌄" />
+          <Header title="Payroll readiness" />
           <div className="mt-3 flex items-center gap-5">
             <div className="relative h-24 w-24">
               <div className="grid h-24 w-24 place-items-center rounded-full border-[10px] border-slate-100 border-r-teal-600 border-t-teal-600">
@@ -523,7 +676,7 @@ export default function HrDashboardPage() {
           </button>
         </Card>
         <Card>
-          <Header title="Top absence departments" right="This month  ⌄" />
+          <Header title="Top absence departments"/>
           <div className="mt-4 space-y-4">
             {[
               ["Operations", "9.2%", 78],
