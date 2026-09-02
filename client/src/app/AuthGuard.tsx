@@ -26,6 +26,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   if (!accessToken) return <Navigate to="/login" replace />;
 
   const isAdmin = user?.roles.includes("Admin") ?? false;
+  const isLocalCredentialSession = user?.id === 0;
   const isPlainUser = !isAdmin && user?.roles.length === 1 && user.roles[0] === "User";
   const isDepartmentHeadOnly = !isAdmin && (user?.roles.includes("DepartmentHead") ?? false);
   const isRestrictedNavUser = isPlainUser || isDepartmentHeadOnly;
@@ -37,6 +38,10 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   if (!isAdmin && ADMIN_ONLY_PATHS.includes(location.pathname)) {
     return <Navigate to={isRestrictedNavUser ? "/task-analytics" : "/"} replace />;
+  }
+
+  if (isLocalCredentialSession && location.pathname !== "/finance") {
+    return <Navigate to="/finance" replace />;
   }
 
   // Admin lands on Task Analytics after login — the dashboard root is not part of Admin's
