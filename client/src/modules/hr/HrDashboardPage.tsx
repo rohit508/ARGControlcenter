@@ -25,7 +25,6 @@ const trend = [
   { day: "Thu", value: 1083 },
   { day: "Fri", value: 1038 },
   { day: "Sat", value: 414 },
-  { day: "Sun", value: 238 },
 ];
 const liveAttendance = [
   ["AM", "Arjun Mehta", "Engineering", "08:48 AM", "Present"],
