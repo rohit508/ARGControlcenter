@@ -36,6 +36,7 @@ const TicketDetailPage = lazy(() => import("../modules/employee-tasks/TicketDeta
 const TaskAnalyticsPage = lazy(() => import("../modules/dashboard/TaskAnalyticsPage"));
 const EmployeesPage = lazy(() => import("../modules/employees/EmployeesPage"));
 const RbacAdminPage = lazy(() => import("../modules/admin/RbacAdminPage"));
+const HrDashboardPage = lazy(() => import("../modules/hr/HrDashboardPage"));
 
 function PageFallback() {
   return <div className="text-slate-400 text-sm">Loading…</div>;
@@ -54,6 +55,7 @@ export default function App() {
           }
         >
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/hr-dashboard" element={<HrDashboardPage />} />
           <Route path="/projects" element={<ProjectsListPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/change-requests" element={<ChangeRequestsPage />} />
