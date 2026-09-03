@@ -101,6 +101,20 @@ export function useDepartments() {
   });
 }
 
+export function useCreateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api.post<{ data: { id: number; name: string } }>("/departments", { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      // Department Teams renders one card per department from this endpoint's own response —
+      // a brand-new department has no members yet, but its card (with an empty roster and the
+      // new Add Member/Set Head controls) should appear immediately, not after a stray refetch.
+      queryClient.invalidateQueries({ queryKey: ["employee-tasks", "department-teams"] });
+    },
+  });
+}
+
 export function useRoles() {
   return useQuery({
     queryKey: ["rbac", "roles"],

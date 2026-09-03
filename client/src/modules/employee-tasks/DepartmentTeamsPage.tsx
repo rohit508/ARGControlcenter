@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "../../components/ui/Badge";
 import SearchableSelect from "../../components/ui/SearchableSelect";
 import { useDepartmentTeams } from "./useEmployeeTasks";
-import { useEmployees, useUpdateEmployee, useUpdateEmployeeRoles, useCreateLoginForEmployee, useRoles } from "../employees/useEmployees";
+import { useEmployees, useUpdateEmployee, useUpdateEmployeeRoles, useCreateLoginForEmployee, useRoles, useCreateDepartment } from "../employees/useEmployees";
+import { ApiClientError } from "../../services/apiClient";
 import { usePermissions } from "../../hooks/usePermissions";
 import EmployeeFormModal from "../employees/EmployeeFormModal";
 import { Employee } from "../../types";
@@ -135,6 +136,82 @@ function HeadPicker({
   );
 }
 
+// Header control for creating a brand-new department — separate from AddMemberControl/HeadPicker
+// since it has no per-department scope of its own (it's what creates the department those two
+// then act on). Kept inline like the other two controls in this file rather than a shared
+// component, since nothing else in the app creates departments.
+function AddDepartmentControl() {
+  const createDepartment = useCreateDepartment();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setError(null);
+    try {
+      await createDepartment.mutateAsync(trimmed);
+      setName("");
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : "Couldn't create that department. Try again.");
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+      >
+        + Add Department
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-2">
+      <div>
+        <input
+          autoFocus
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit();
+            if (e.key === "Escape") {
+              setOpen(false);
+              setName("");
+              setError(null);
+            }
+          }}
+          placeholder="Department name…"
+          className="rounded-md border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-sm"
+        />
+        {error && <div className="text-xs text-danger-500 mt-1">{error}</div>}
+      </div>
+      <button
+        onClick={submit}
+        disabled={!name.trim() || createDepartment.isPending}
+        className="text-sm px-3 py-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50"
+      >
+        {createDepartment.isPending ? "Adding…" : "Add"}
+      </button>
+      <button
+        onClick={() => {
+          setOpen(false);
+          setName("");
+          setError(null);
+        }}
+        className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 // Admin/CEO-only, company-wide counterpart to MyTeamPage (which is scoped to a single
 // DepartmentHead's own department) — every department listed together, each with its head's name
 // and team roster, so Admin/CEO doesn't need to hop between departments one at a time.
@@ -166,12 +243,15 @@ export default function DepartmentTeamsPage() {
           <h1 className="text-xl font-semibold">Department Teams</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">Every department's head and team, in one place.</p>
         </div>
-        <button
-          onClick={() => navigate("/employee-tasks")}
-          className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          Back to Task Board
-        </button>
+        <div className="flex items-start gap-2">
+          {canManage && <AddDepartmentControl />}
+          <button
+            onClick={() => navigate("/employee-tasks")}
+            className="text-sm px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            Back to Task Board
+          </button>
+        </div>
       </div>
 
       {departmentTeams.length === 0 ? (
