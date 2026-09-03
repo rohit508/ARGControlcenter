@@ -21,6 +21,7 @@ const ADMIN_PRIMARY_PATHS = [
   "/admin/rbac",
   "/hr-dashboard",
   "/finance",
+  "/shipment-dashboard",
 ];
 
 const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: string[] }[] }[] = [
@@ -83,6 +84,10 @@ const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: s
       { to: "/hr-dashboard", label: "HR Dashboard", roles: ["HR", "CEO", "Admin"] },
       { to: "/leave-requests", label: "Leave Requests", roles: ["HR"] },
     ],
+  },
+  {
+    label: "Shipment",
+    items: [{ to: "/shipment-dashboard", label: "Shipment Dashboard" }],
   },
   {
     label: "Operations",
