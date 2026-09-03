@@ -16,11 +16,13 @@ router.use(authenticate);
  * ported here rather than re-introducing that bug in the rewrite.
  */
 function allocatedHoursSubquery(monthStart: string, monthEnd: string) {
+  // julianday() is SQLite-only (Postgres date subtraction already yields an integer day count),
+  // and SQLite's MIN/MAX(a, b) scalar form doesn't exist in Postgres — LEAST/GREATEST replace it.
   return sql<number>`(
     SELECT COALESCE(SUM(
-      MAX(0,
-        MIN(julianday(${tasks.finishDate}), julianday(${monthEnd}))
-        - MAX(julianday(${tasks.startDate}), julianday(${monthStart}))
+      GREATEST(0,
+        LEAST(${tasks.finishDate}::date, ${monthEnd}::date)
+        - GREATEST(${tasks.startDate}::date, ${monthStart}::date)
         + 1
       ) * 6
     ), 0)

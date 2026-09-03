@@ -42,7 +42,9 @@ router.get(
           total: sql<number>`COUNT(*)`,
           completed: sql<number>`SUM(CASE WHEN ${tasks.status} = 'Completed' THEN 1 ELSE 0 END)`,
           overdue: sql<number>`SUM(CASE WHEN ${tasks.finishDate} < ${today} AND ${tasks.status} != 'Completed' THEN 1 ELSE 0 END)`,
-          critical: sql<number>`SUM(CASE WHEN ${tasks.isCriticalCache} = 1 THEN 1 ELSE 0 END)`,
+          // isCriticalCache is a real Postgres boolean (was an integer 0/1 column under SQLite) —
+          // compare against the boolean literal, not 1.
+          critical: sql<number>`SUM(CASE WHEN ${tasks.isCriticalCache} = true THEN 1 ELSE 0 END)`,
           upcomingDeadlines: sql<number>`SUM(CASE WHEN ${tasks.finishDate} BETWEEN ${today} AND ${in14} AND ${tasks.status} != 'Completed' THEN 1 ELSE 0 END)`,
         })
         .from(tasks)
@@ -63,7 +65,9 @@ router.get(
       await db
         .select({
           open: sql<number>`SUM(CASE WHEN ${issues.status} IN ('Open','In Progress') THEN 1 ELSE 0 END)`,
-          overdue: sql<number>`SUM(CASE WHEN ${issues.status} IN ('Open','In Progress') AND julianday(${today}) - julianday(${issues.dateRaised}) > 14 THEN 1 ELSE 0 END)`,
+          // julianday() is SQLite-only; Postgres date subtraction (::date - ::date) already
+          // yields an integer day count directly, same as top-delayed-projects below.
+          overdue: sql<number>`SUM(CASE WHEN ${issues.status} IN ('Open','In Progress') AND ${today}::date - ${issues.dateRaised}::date > 14 THEN 1 ELSE 0 END)`,
         })
         .from(issues)
         .where(isNull(issues.deletedAt))
