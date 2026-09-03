@@ -69,7 +69,7 @@ const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: s
   },
   {
     label: "Finance",
-    items: [{ to: "/finance", label: "Finance Dashboard", roles: ["Finance"] }],
+    items: [{ to: "/finance", label: "Freight And Finance", roles: ["Finance"] }],
   },
   {
     label: "Procurement",
