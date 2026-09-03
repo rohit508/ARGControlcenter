@@ -57,6 +57,25 @@ export function useDeleteEmployee() {
   });
 }
 
+export function useDeletedEmployees(query: { q?: string } = {}, options: { enabled?: boolean } = {}) {
+  const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  const qs = params.toString();
+  return useQuery({
+    queryKey: ["employees", "deleted", query],
+    queryFn: () => api.get<{ data: Employee[] }>(`/employees/deleted${qs ? `?${qs}` : ""}`),
+    enabled: options.enabled ?? true,
+  });
+}
+
+export function useRestoreEmployee() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.post<{ data: Employee }>(`/employees/${id}/restore`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+  });
+}
+
 export function useCreateLoginForEmployee() {
   const queryClient = useQueryClient();
   return useMutation({

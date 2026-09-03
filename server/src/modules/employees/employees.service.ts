@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { db } from "../../db/client";
 import { employees, users, userRoles, roles, departments } from "../../db/schema";
-import { eq, and, isNull, like, or, inArray } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, like, or, inArray } from "drizzle-orm";
 import { notFound, conflict } from "../../middleware/errorHandler.middleware";
 import { writeAudit } from "../../lib/audit";
 import { nextCode } from "../../lib/codeGenerator";
@@ -134,6 +134,28 @@ export async function deleteEmployee(id: number, actorUserId: number) {
   await db.update(users).set({ isActive: false }).where(eq(users.employeeId, id));
 
   await writeAudit({ userId: actorUserId, entityType: "employees", entityId: id, action: "delete", before });
+}
+
+export async function listDeletedEmployees(query: { q?: string }) {
+  const conditions = [isNotNull(employees.deletedAt)];
+  if (query.q) {
+    const term = `%${query.q}%`;
+    conditions.push(or(like(employees.fullName, term), like(employees.employeeCode, term), like(employees.email, term))!);
+  }
+  const rows = await db.select().from(employees).where(and(...conditions)).orderBy(employees.fullName);
+  return withLoginInfo(rows);
+}
+
+export async function restoreEmployee(id: number, actorUserId: number) {
+  const before = (await db.select().from(employees).where(and(eq(employees.id, id), isNotNull(employees.deletedAt))).limit(1))[0];
+  if (!before) throw notFound("Deleted employee");
+
+  await db.update(employees).set({ deletedAt: null }).where(eq(employees.id, id));
+  // Mirror deleteEmployee's own login deactivation by reactivating it here.
+  await db.update(users).set({ isActive: true }).where(eq(users.employeeId, id));
+
+  await writeAudit({ userId: actorUserId, entityType: "employees", entityId: id, action: "update", after: { restored: true } });
+  return getEmployee(id);
 }
 
 export async function createLoginForEmployee(id: number, input: CreateLoginInput, actorUserId: number) {

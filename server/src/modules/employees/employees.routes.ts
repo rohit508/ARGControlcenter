@@ -20,6 +20,16 @@ router.get(
   })
 );
 
+// Must precede "/:id" — otherwise Express would try to parse "deleted" as an employee id.
+router.get(
+  "/deleted",
+  requirePermission("employees", "delete"),
+  asyncHandler(async (req, res) => {
+    const data = await service.listDeletedEmployees({ q: req.query.q ? String(req.query.q) : undefined });
+    res.json({ data, meta: { total: data.length } });
+  })
+);
+
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -53,6 +63,15 @@ router.delete(
   asyncHandler(async (req, res) => {
     await service.deleteEmployee(Number(req.params.id), req.user!.userId);
     res.status(204).send();
+  })
+);
+
+router.post(
+  "/:id/restore",
+  requirePermission("employees", "delete"),
+  asyncHandler(async (req, res) => {
+    const row = await service.restoreEmployee(Number(req.params.id), req.user!.userId);
+    res.json({ data: row });
   })
 );
 
