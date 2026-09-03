@@ -21,9 +21,20 @@ const ADMIN_PRIMARY_PATHS = [
   "/admin/rbac",
   "/hr-dashboard",
   "/finance",
+  "http://192.168.18.200:91/login",
 ];
 
-const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: string[] }[] }[] = [
+interface NavItem {
+  to: string;
+  label: string;
+  roles?: string[];
+  // Opens in a new tab instead of routing internally — for links to systems outside this app
+  // (e.g. a separate HR tool's own login page). Kept as its own field rather than overloading
+  // "to" so the role/active-link logic below doesn't need to special-case external targets.
+  externalUrl?: string;
+}
+
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Employee Tasks",
     items: [
@@ -81,6 +92,11 @@ const NAV_GROUPS: { label: string; items: { to: string; label: string; roles?: s
     label: "HR",
     items: [
       { to: "/hr-dashboard", label: "HR Dashboard", roles: ["HR", "CEO", "Admin"] },
+      // Not a route in this app — opens the separate HR system's own login page in a new tab.
+      // "to" still needs a unique value (used as the React key and for role/active-state checks
+      // elsewhere), so it reuses the external URL there too; externalUrl is what the render logic
+      // below actually checks to decide between <NavLink> and a plain <a target="_blank">.
+      { to: "http://192.168.18.200:91/login", label: "Set Up", roles: ["HR", "CEO", "Admin"], externalUrl: "http://192.168.18.200:91/login" },
       { to: "/leave-requests", label: "Leave Requests", roles: ["HR"] },
     ],
   },
@@ -228,6 +244,28 @@ export default function AppShell() {
                             active, this one not), so the tag isn't shown twice for the same item. */}
                         {!collapsed && !groupDisabled && <span className="text-[10px] font-normal text-slate-400 dark:text-slate-600">(Coming Soon)</span>}
                       </span>
+                    );
+                  }
+
+                  if (item.externalUrl) {
+                    return (
+                      <a
+                        key={item.to}
+                        href={item.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Opens ${item.externalUrl} in a new tab`}
+                        className="flex items-center gap-2 px-4 py-2 text-sm rounded-md mx-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        {collapsed ? item.label.slice(0, 1) : item.label}
+                        {!collapsed && (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 shrink-0">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <path d="M15 3h6v6" />
+                            <path d="M10 14 21 3" />
+                          </svg>
+                        )}
+                      </a>
                     );
                   }
 
