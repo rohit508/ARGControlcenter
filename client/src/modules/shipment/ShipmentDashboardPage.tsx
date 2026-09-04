@@ -50,6 +50,22 @@ const pipeline = [
   { stage: "Completed", count: 5 },
 ];
 
+const shipmentFunnel = [
+  { stage: "1. Inquiry received", count: 10 },
+  { stage: "2. Quotation sent", count: 2 },
+  { stage: "3. Rate approved", count: 2 },
+  { stage: "4. Booking confirmed", count: 2 },
+  { stage: "5. Cargo received", count: 10 },
+  { stage: "6. HAWB raised", count: 0 },
+  { stage: "7. Customs released", count: 2 },
+  { stage: "8. MAWB / airline booked", count: 10 },
+  { stage: "9. Departed", count: 2 },
+  { stage: "10. Arrived", count: 1 },
+  { stage: "11. Delivered", count: 1 },
+  { stage: "12. Invoiced", count: 1 },
+  { stage: "13. Job closed", count: 1 },
+];
+
 // Categorical palette: dataviz skill's validated default (first 3 slots pass all-pairs CVD/contrast
 // checks together) — not the app's brand tokens, which are UI chrome colors, not built for this job.
 const TRANSPORT_COLORS = { Air: "#2a78d6", Road: "#eb6834", "Sea / Waterway": "#1baf7a" };
@@ -104,14 +120,6 @@ const topRevenue = [
   { code: "SHP/2604/00014", customer: "Viet Handicraft Co., Ltd", revenue: null, profit: null },
 ];
 
-const topRoutes = [
-  { code: "R00063", name: "Waterway (Boa...)", shipments: 3 },
-  { code: "R00009", name: "Waterway (Boa...)", shipments: 2 },
-  { code: "R00010", name: "Waterway (Boa...)", shipments: 2 },
-  { code: "R00011", name: "Truck (Freigh...)", shipments: 2 },
-  { code: "R00032", name: "Truck (Freigh...)", shipments: 2 },
-];
-
 const delayedShipments = [
   { code: "SHP/2604/00009", eta: "3/20/2026", customer: "Hanoi Textile Co., Ltd", responsible: "Marc Demo" },
   { code: "SHP/2604/00014", eta: "3/21/2026", customer: "Viet Handicraft Co., Ltd", responsible: "Marc Demo" },
@@ -132,7 +140,70 @@ const pendingBookings = [
   { booking: "BK-260420-007", booked: "3/20/2026", shipment: "SHP/2604/00010", carrier: "Maersk Line Vietnam", responsible: "ViindooBot" },
 ];
 
+// Master status column — every stage a shipment can sit in end to end, from first inquiry through
+// delivery/close and the exception/terminal states. Placeholder counts, same mock-data status as
+// the rest of this page (see note above); becomes `GROUP BY status` once the Shipment table exists.
+const shipmentsByStatus: { status: string; shipments: number; chgWeight: number; revenue: number | null }[] = [
+  { status: "New Inquiry", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Awaiting Quotation", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Quotation Sent", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Negotiation", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Confirmed", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Pickup Pending", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Cargo Received", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Documentation Pending", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Ready for Customs", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Customs Cleared", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Ready for Airline", shipments: 7, chgWeight: 6590, revenue: null },
+  { status: "Booked", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Accepted", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Departed", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "In Transit", shipments: 1, chgWeight: 950, revenue: 400000 },
+  { status: "Arrived", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Out for Delivery", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Delivered", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Closed", shipments: 1, chgWeight: 2450, revenue: 810000 },
+  { status: "Delayed", shipments: 1, chgWeight: 6040, revenue: null },
+  { status: "Hold", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Exception", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Returned", shipments: 0, chgWeight: 0, revenue: null },
+  { status: "Cancelled", shipments: 0, chgWeight: 0, revenue: null },
+];
+
+// Employee performance — headcount roster with sales-exec involvement, revenue credited, and open
+// job load. Placeholder counts, same mock-data status as the rest of this page (see note above);
+// becomes a per-employee aggregate query once Shipment/Booking records carry a responsible-employee
+// reference. Unfilled roster seats (no employee assigned yet) keep the "-" revenue convention used
+// by shipmentsByStatus above rather than 0, since 0 would misread as "assigned but earned nothing."
+const employeePerformance: { employee: string; asSalesExec: number; salesRevenue: number | null; openJobs: number }[] = [
+  { employee: "Sales Manager", asSalesExec: 0, salesRevenue: null, openJobs: 0 },
+  { employee: "Sales Executive 1", asSalesExec: 1, salesRevenue: 810000, openJobs: 0 },
+  { employee: "Sales Executive 2", asSalesExec: 1, salesRevenue: 400000, openJobs: 0 },
+  { employee: "CSR Officer", asSalesExec: 0, salesRevenue: null, openJobs: 1 },
+  { employee: "Warehouse Supervisor", asSalesExec: 0, salesRevenue: null, openJobs: 0 },
+  { employee: "Documentation Officer", asSalesExec: 0, salesRevenue: null, openJobs: 0 },
+  { employee: "Customs Agent", asSalesExec: 0, salesRevenue: null, openJobs: 0 },
+  { employee: "Accounts Officer", asSalesExec: 0, salesRevenue: null, openJobs: 0 },
+  { employee: "Operations Manager", asSalesExec: 0, salesRevenue: null, openJobs: 0 },
+];
+
+// "Today" activity snapshot — placeholder counts (same mock-data status as the rest of this page,
+// see note above) shaped to become `COUNT(*) WHERE date = today` queries per metric once the
+// Shipment/Booking/Invoice/Event tables exist.
+const todayStats: { label: string; value: number; emphasis?: boolean }[] = [
+  { label: "Inquiries received today", value: 0, emphasis: true },
+  { label: "Quotations sent today", value: 0 },
+  { label: "Bookings confirmed today", value: 0, emphasis: true },
+  { label: "Cargo received today", value: 0 },
+  { label: "Flights departed today", value: 0, emphasis: true },
+  { label: "Shipments arrived today", value: 0 },
+  { label: "Deliveries completed today", value: 0, emphasis: true },
+  { label: "Invoices raised today", value: 0 },
+  { label: "Events logged today", value: 0 },
+];
+
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const pkr = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const number = new Intl.NumberFormat("en-US");
 
 type StatAccent = "indigo" | "emerald" | "slate" | "rose" | "amber" | "cyan" | "violet";
@@ -171,11 +242,76 @@ function ShipmentStat({ label, value, icon, accent }: { label: string; value: st
   );
 }
 
+// "Today" snapshot — soft card matching SectionCard's plain-white header and StatusPanel's
+// rounded chip-row treatment (dropped the solid brand-color title bar and flat striped rows,
+// which read as a harsh spreadsheet next to the rest of the page's softened widgets).
+function TodayPanel({ rows }: { rows: { label: string; value: number; emphasis?: boolean }[] }) {
+  return (
+    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 flex flex-col overflow-hidden">
+      <div className="px-5 pt-4 pb-3">
+        <h2 className="text-sm font-semibold text-brand-700 dark:text-brand-300">Today</h2>
+      </div>
+      <div className="px-2 pb-2 space-y-1">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors"
+          >
+            <span className={`text-sm text-slate-700 dark:text-slate-200 truncate ${row.emphasis ? "font-semibold" : "font-medium"}`}>{row.label}</span>
+            <span className="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-2 rounded-full bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-200 text-xs font-semibold tabular-nums shrink-0">
+              {number.format(row.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Master status breakdown — soft card matching SectionCard's plain-white header instead of a dark
+// title bar or a <table>: a bare header row read as spreadsheet-y even after switching off <table>
+// markup. Each status is a pill-badge row (rounded chip for the shipment count, muted secondary
+// text for weight/revenue) with generous padding so scrolling never clips a row mid-way; the
+// scroll container ends exactly on a row boundary and fades the last row instead of hard-cropping.
+function StatusPanel({ rows }: { rows: typeof shipmentsByStatus }) {
+  return (
+    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0">
+        <h2 className="text-sm font-semibold text-brand-700 dark:text-brand-300">Shipments Status</h2>
+        <span className="text-xs text-slate-400">{rows.length} statuses</span>
+      </div>
+      {/* Fixed to exactly 5 rows (56px each); remaining rows scroll within the card instead of
+          pushing the rest of the page down or clipping a row mid-height. */}
+      <div className="max-h-[280px] overflow-y-auto px-2 pb-2 space-y-1">
+        {rows.map((row) => (
+          <div
+            key={row.status}
+            className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 h-14 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors"
+          >
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{row.status}</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="text-right leading-tight">
+                <div className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+                  {row.revenue == null ? "—" : `₨${pkr.format(row.revenue)}`}
+                </div>
+                <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{number.format(row.chgWeight)} kg</div>
+              </div>
+              <span className="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-2 rounded-full bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-200 text-xs font-semibold tabular-nums">
+                {number.format(row.shipments)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SectionCard({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h2>
+        <h2 className="text-sm font-semibold text-brand-700 dark:text-brand-300">{title}</h2>
         {action}
       </div>
       {children}
@@ -366,103 +502,6 @@ export default function ShipmentDashboardPage() {
         <ShipmentStat label="Total Weight (kg)" value={number.format(kpis.totalWeight)} icon="⚖️" accent="amber" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <SectionCard title="Shipments by Month">
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={shipmentsByMonth} margin={{ left: -20, top: 8 }}>
-              <defs>
-                <linearGradient id="shipmentAreaFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2a78d6" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#2a78d6" stopOpacity={0.03} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
-              <XAxis dataKey="month" fontSize={12} axisLine={false} tickLine={false} />
-              <YAxis fontSize={12} axisLine={false} tickLine={false} width={30} />
-              <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="count" name="Shipments" stroke="#2a78d6" strokeWidth={2} fill="url(#shipmentAreaFill)" dot={{ r: 3, fill: "#2a78d6", strokeWidth: 0 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </SectionCard>
-
-        <SectionCard title="Expected Arrival Timeline">
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={arrivalTimeline} margin={{ left: -20, top: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
-              <XAxis dataKey="month" fontSize={12} axisLine={false} tickLine={false} />
-              <YAxis fontSize={12} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="count" name="Arrivals" fill="#2a78d6" radius={[4, 4, 0, 0]} maxBarSize={64} />
-            </BarChart>
-          </ResponsiveContainer>
-        </SectionCard>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <SectionCard title="Shipment Pipeline" action={<span className="text-xs text-slate-400">By stage</span>}>
-          <div className="lg:col-span-2">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={pipeline} margin={{ left: -20, top: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
-                <XAxis dataKey="stage" fontSize={11} axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" height={50} />
-                <YAxis fontSize={12} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" name="Shipments" fill="#2a78d6" radius={[4, 4, 0, 0]} maxBarSize={48} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Transport Mode">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={transportMode} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
-                {transportMode.map((d) => (
-                  <Cell key={d.name} fill={TRANSPORT_COLORS[d.name as keyof typeof TRANSPORT_COLORS]} stroke="none" />
-                ))}
-              </Pie>
-              <Tooltip content={<ChartTooltip formatter={(v: number) => `${v} shipments`} />} />
-              <Legend
-                iconType="circle"
-                formatter={(value) => <span className="text-slate-600 dark:text-slate-300 text-xs">{value}</span>}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </SectionCard>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <SectionCard title="Top Customers" action={<span className="text-xs text-slate-400">by shipments</span>}>
-          <Leaderboard rows={topCustomers} keyField="name" nameField="name" metricField="shipments" secondaryField="revenue" secondaryFormat={money.format} />
-        </SectionCard>
-
-        <SectionCard title="Top Carriers" action={<span className="text-xs text-slate-400">by shipments</span>}>
-          <Leaderboard rows={topCarriers} keyField="name" nameField="name" metricField="shipments" />
-        </SectionCard>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <SectionCard title="Top Revenue" action={<span className="text-xs text-slate-400">by shipment</span>}>
-          <Leaderboard
-            rows={topRevenue.map((r) => ({ ...r, revenueValue: r.revenue ?? 0 }))}
-            keyField="code"
-            nameField="code"
-            metricField="revenueValue"
-            metricFormat={money.format}
-            secondaryField="customer"
-          />
-        </SectionCard>
-
-        <div className="grid grid-rows-2 gap-4">
-          <SectionCard title="Top Responsible" action={<span className="text-xs text-slate-400">by shipments</span>}>
-            <Leaderboard rows={topResponsible} keyField="name" nameField="name" metricField="shipments" secondaryField="revenue" secondaryFormat={money.format} />
-          </SectionCard>
-          <SectionCard title="Shipment Types" action={<span className="text-xs text-slate-400">by shipments</span>}>
-            <Leaderboard rows={shipmentTypes} keyField="type" nameField="type" metricField="shipments" secondaryField="revenue" secondaryFormat={money.format} />
-          </SectionCard>
-        </div>
-      </div>
-
       <SectionCard
         title="Delayed & At Risk Shipments"
         action={
@@ -495,6 +534,33 @@ export default function ShipmentDashboardPage() {
       </SectionCard>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <SectionCard title="Top Customers" action={<span className="text-xs text-slate-400">by shipments</span>}>
+          <Leaderboard rows={topCustomers} keyField="name" nameField="name" metricField="shipments" secondaryField="revenue" secondaryFormat={money.format} />
+        </SectionCard>
+
+        <SectionCard title="Top Carriers" action={<span className="text-xs text-slate-400">by shipments</span>}>
+          <Leaderboard rows={topCarriers} keyField="name" nameField="name" metricField="shipments" />
+        </SectionCard>
+
+        <SectionCard title="Top Revenue" action={<span className="text-xs text-slate-400">by shipment</span>}>
+          <Leaderboard
+            rows={topRevenue.map((r) => ({ ...r, revenueValue: r.revenue ?? 0 }))}
+            keyField="code"
+            nameField="code"
+            metricField="revenueValue"
+            metricFormat={money.format}
+            secondaryField="customer"
+          />
+        </SectionCard>
+
+        <SectionCard title="Top Responsible" action={<span className="text-xs text-slate-400">by shipments</span>}>
+          <Leaderboard rows={topResponsible} keyField="name" nameField="name" metricField="shipments" secondaryField="revenue" secondaryFormat={money.format} />
+        </SectionCard>
+
+        <SectionCard title="Shipment Types" action={<span className="text-xs text-slate-400">by shipments</span>}>
+          <Leaderboard rows={shipmentTypes} keyField="type" nameField="type" metricField="shipments" secondaryField="revenue" secondaryFormat={money.format} />
+        </SectionCard>
+
         <SectionCard title="Pending Bookings">
           <MiniTable
             keyField="booking"
@@ -509,15 +575,110 @@ export default function ShipmentDashboardPage() {
           />
         </SectionCard>
 
-        <SectionCard title="Top Routes">
+        <TodayPanel rows={todayStats} />
+
+        <StatusPanel rows={shipmentsByStatus} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <SectionCard title="Employee Performance" action={<span className="text-xs text-slate-400">by sales revenue</span>}>
           <MiniTable
-            keyField="code"
-            rows={topRoutes}
+            keyField="employee"
+            rows={employeePerformance}
             columns={[
-              { key: "code", header: "Route", render: (r) => <span className="text-brand-600 dark:text-brand-100 font-medium">[{r.code}] {r.name}</span> },
-              { key: "shipments", header: "Shipments", align: "right" },
+              { key: "employee", header: "Employee", render: (r) => <span className="text-brand-600 dark:text-brand-100 font-medium">{r.employee}</span> },
+              { key: "asSalesExec", header: "As Sales Exec", align: "right" },
+              { key: "salesRevenue", header: "Sales Revenue (PKR)", align: "right", render: (r) => (r.salesRevenue == null ? "-" : pkr.format(r.salesRevenue)) },
+              { key: "openJobs", header: "Open Jobs Assigned", align: "right" },
             ]}
           />
+        </SectionCard>
+
+        <SectionCard title="Sales Revenue by Employee" action={<span className="text-xs text-slate-400">PKR</span>}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={employeePerformance} layout="vertical" margin={{ left: 12, top: 8, right: 16 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} horizontal={false} />
+              <XAxis type="number" fontSize={11} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis type="category" dataKey="employee" fontSize={10} axisLine={false} tickLine={false} width={120} />
+              <Tooltip content={<ChartTooltip formatter={(v: number) => `₨${pkr.format(v)}`} />} />
+              <Bar dataKey={(r: (typeof employeePerformance)[number]) => r.salesRevenue ?? 0} name="Sales Revenue" fill="#2a78d6" radius={[0, 4, 4, 0]} maxBarSize={16} />
+            </BarChart>
+          </ResponsiveContainer>
+        </SectionCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4 mb-4">
+        <SectionCard title="Shipments by Month">
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={shipmentsByMonth} margin={{ left: -20, top: 8 }}>
+              <defs>
+                <linearGradient id="shipmentAreaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2a78d6" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#2a78d6" stopOpacity={0.03} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+              <XAxis dataKey="month" fontSize={12} axisLine={false} tickLine={false} />
+              <YAxis fontSize={12} axisLine={false} tickLine={false} width={30} />
+              <Tooltip content={<ChartTooltip />} />
+              <Area type="monotone" dataKey="count" name="Shipments" stroke="#2a78d6" strokeWidth={2} fill="url(#shipmentAreaFill)" dot={{ r: 3, fill: "#2a78d6", strokeWidth: 0 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </SectionCard>
+
+        <SectionCard title="Expected Arrival Timeline">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={arrivalTimeline} margin={{ left: -20, top: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+              <XAxis dataKey="month" fontSize={12} axisLine={false} tickLine={false} />
+              <YAxis fontSize={12} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name="Arrivals" fill="#2a78d6" radius={[4, 4, 0, 0]} maxBarSize={64} />
+            </BarChart>
+          </ResponsiveContainer>
+        </SectionCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <SectionCard title="Shipment Pipeline" action={<span className="text-xs text-slate-400">By stage</span>}>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={pipeline} margin={{ left: -20, top: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+              <XAxis dataKey="stage" fontSize={11} axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" height={50} />
+              <YAxis fontSize={12} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name="Shipments" fill="#2a78d6" radius={[4, 4, 0, 0]} maxBarSize={48} />
+            </BarChart>
+          </ResponsiveContainer>
+        </SectionCard>
+
+        <SectionCard title="Transport Mode">
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={transportMode} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                {transportMode.map((d) => (
+                  <Cell key={d.name} fill={TRANSPORT_COLORS[d.name as keyof typeof TRANSPORT_COLORS]} stroke="none" />
+                ))}
+              </Pie>
+              <Tooltip content={<ChartTooltip formatter={(v: number) => `${v} shipments`} />} />
+              <Legend
+                iconType="circle"
+                formatter={(value) => <span className="text-slate-600 dark:text-slate-300 text-xs">{value}</span>}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </SectionCard>
+
+        <SectionCard title="Shipment Funnel" action={<span className="text-xs text-slate-400">by stage</span>}>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={shipmentFunnel} layout="vertical" margin={{ left: 12, top: 8, right: 16 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} horizontal={false} />
+              <XAxis type="number" fontSize={11} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis type="category" dataKey="stage" fontSize={10} axisLine={false} tickLine={false} width={110} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name="Shipments" fill="#2a78d6" radius={[0, 4, 4, 0]} maxBarSize={14} />
+            </BarChart>
+          </ResponsiveContainer>
         </SectionCard>
       </div>
     </div>
