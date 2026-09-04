@@ -7,7 +7,11 @@ import { ApiError } from "../../middleware/errorHandler.middleware";
 
 const router = Router();
 
-const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
+// Every account logs in with its email except one special-cased login alias (see LOGIN_ALIASES
+// in auth.service.ts) — dropped the email() format check so that alias isn't rejected here
+// before it ever reaches the lookup. auth.service.login() still requires an exact match against
+// a real stored users.email or a known alias, so this doesn't loosen who can actually log in.
+const loginSchema = z.object({ email: z.string().min(1), password: z.string().min(1) });
 const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 
 router.post(

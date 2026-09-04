@@ -61,7 +61,16 @@ async function getEmployeeName(employeeId: number | null): Promise<string | null
   return rows[0]?.fullName ?? null;
 }
 
-export async function login(email: string, password: string, ip: string | null) {
+// One-off login aliases: lets a specific account sign in with a short name instead of typing its
+// full email, without turning login into a general username system for everyone. users.email
+// stays the real identifier everywhere else (audit log, JWT payload, /me, uniqueness) — this only
+// resolves the alias to that email before the normal lookup below.
+const LOGIN_ALIASES: Record<string, string> = {
+  argadmin: "argadmin@erp.local",
+};
+
+export async function login(rawEmail: string, password: string, ip: string | null) {
+  const email = LOGIN_ALIASES[rawEmail] ?? rawEmail;
   const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
   const user = rows[0];
   if (!user || !user.isActive) throw new ApiError(401, "UNAUTHENTICATED", "Invalid email or password");
