@@ -14,7 +14,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import StatTile from "../dashboard/StatTile";
 
 // Placeholder data shaped like a real shipment/logistics dataset (freight-forwarding domain:
 // bookings, containers, carriers, transport legs) — there is no backend for this yet, this page
@@ -135,6 +134,42 @@ const pendingBookings = [
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const number = new Intl.NumberFormat("en-US");
+
+type StatAccent = "indigo" | "emerald" | "slate" | "rose" | "amber" | "cyan" | "violet";
+
+// Page-local stat tile — kept distinct from the shared dashboard StatTile (used by the Executive
+// Dashboard, not touched here) so this redesign doesn't change that page's look too. Trades the
+// flat bordered-box read ("cartons") for a soft gradient surface, a glowing icon badge, and a
+// bottom-edge accent bar with a subtle blur — same accent-color system as the leaderboard rows
+// so the whole page reads as one design, not a stat grid stacked above a different-looking list.
+const STAT_ACCENTS: Record<StatAccent, { from: string; to: string; icon: string; glow: string; bar: string }> = {
+  indigo: { from: "from-indigo-50 dark:from-indigo-500/10", to: "to-white dark:to-slate-900", icon: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300", glow: "bg-indigo-400/30", bar: "bg-indigo-500" },
+  emerald: { from: "from-emerald-50 dark:from-emerald-500/10", to: "to-white dark:to-slate-900", icon: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300", glow: "bg-emerald-400/30", bar: "bg-emerald-500" },
+  slate: { from: "from-slate-50 dark:from-slate-500/10", to: "to-white dark:to-slate-900", icon: "bg-slate-500/15 text-slate-600 dark:text-slate-300", glow: "bg-slate-400/30", bar: "bg-slate-500" },
+  rose: { from: "from-rose-50 dark:from-rose-500/10", to: "to-white dark:to-slate-900", icon: "bg-rose-500/15 text-rose-600 dark:text-rose-300", glow: "bg-rose-400/30", bar: "bg-rose-500" },
+  amber: { from: "from-amber-50 dark:from-amber-500/10", to: "to-white dark:to-slate-900", icon: "bg-amber-500/15 text-amber-600 dark:text-amber-300", glow: "bg-amber-400/30", bar: "bg-amber-500" },
+  cyan: { from: "from-cyan-50 dark:from-cyan-500/10", to: "to-white dark:to-slate-900", icon: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-300", glow: "bg-cyan-400/30", bar: "bg-cyan-500" },
+  violet: { from: "from-violet-50 dark:from-violet-500/10", to: "to-white dark:to-slate-900", icon: "bg-violet-500/15 text-violet-600 dark:text-violet-300", glow: "bg-violet-400/30", bar: "bg-violet-500" },
+};
+
+function ShipmentStat({ label, value, icon, accent }: { label: string; value: string | number; icon: string; accent: StatAccent }) {
+  const a = STAT_ACCENTS[accent];
+  return (
+    <div className={`group relative overflow-hidden rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-gradient-to-br ${a.from} ${a.to} p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}>
+      <span className={`pointer-events-none absolute -right-4 -top-4 w-16 h-16 rounded-full blur-2xl opacity-60 ${a.glow}`} aria-hidden />
+      <div className="relative flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 truncate">{label}</div>
+          <div className="text-2xl font-bold mt-1 text-slate-800 dark:text-slate-50 tabular-nums">{value}</div>
+        </div>
+        <div className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-sm ${a.icon}`} aria-hidden>
+          {icon}
+        </div>
+      </div>
+      <span className={`absolute bottom-0 left-4 right-4 h-0.5 rounded-full ${a.bar} opacity-70 group-hover:opacity-100 transition-opacity`} aria-hidden />
+    </div>
+  );
+}
 
 function SectionCard({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -317,19 +352,20 @@ export default function ShipmentDashboardPage() {
         </div>
       </div>
 
-      {/* KPI row — reuses the Executive Dashboard's own StatTile so this page shares the same
-          visual language rather than inventing a second stat-tile style. */}
+      {/* KPI row — page-local ShipmentStat tiles (soft gradient + glow), not the flat bordered-box
+          StatTile the Executive Dashboard uses, so this page has one consistent, more polished
+          visual identity end to end rather than a plain stat grid above a redesigned leaderboard. */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        <StatTile label="Total Shipments" value={number.format(kpis.totalShipments)} icon="📦" accent="indigo" />
-        <StatTile label="In Transit" value={number.format(kpis.inTransit)} icon="🚚" accent="cyan" />
-        <StatTile label="Delayed" value={number.format(kpis.delayed)} icon="⏰" accent="rose" />
-        <StatTile label="Revenue" value={money.format(kpis.revenue)} icon="💰" accent="emerald" />
-        <StatTile label="Profit" value={money.format(kpis.profit)} icon="📈" accent="violet" />
-        <StatTile label="Total Containers" value={number.format(kpis.totalContainers)} icon="🧊" accent="indigo" />
-        <StatTile label="Containers In Transit" value={number.format(kpis.containersInTransit)} icon="🚢" accent="cyan" />
-        <StatTile label="Total Packages" value={number.format(kpis.totalPackages)} icon="📋" accent="slate" />
-        <StatTile label="Total CBM" value={kpis.totalCbm.toFixed(2)} icon="📐" accent="amber" />
-        <StatTile label="Total Weight (kg)" value={number.format(kpis.totalWeight)} icon="⚖️" accent="amber" />
+        <ShipmentStat label="Total Shipments" value={number.format(kpis.totalShipments)} icon="📦" accent="indigo" />
+        <ShipmentStat label="In Transit" value={number.format(kpis.inTransit)} icon="🚚" accent="cyan" />
+        <ShipmentStat label="Delayed" value={number.format(kpis.delayed)} icon="⏰" accent="rose" />
+        <ShipmentStat label="Revenue" value={money.format(kpis.revenue)} icon="💰" accent="emerald" />
+        <ShipmentStat label="Profit" value={money.format(kpis.profit)} icon="📈" accent="violet" />
+        <ShipmentStat label="Total Containers" value={number.format(kpis.totalContainers)} icon="🧊" accent="indigo" />
+        <ShipmentStat label="Containers In Transit" value={number.format(kpis.containersInTransit)} icon="🚢" accent="cyan" />
+        <ShipmentStat label="Total Packages" value={number.format(kpis.totalPackages)} icon="📋" accent="slate" />
+        <ShipmentStat label="Total CBM" value={kpis.totalCbm.toFixed(2)} icon="📐" accent="amber" />
+        <ShipmentStat label="Total Weight (kg)" value={number.format(kpis.totalWeight)} icon="⚖️" accent="amber" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
