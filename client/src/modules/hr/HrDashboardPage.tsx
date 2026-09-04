@@ -175,16 +175,16 @@ function LiveDataLoader() {
 
 export default function HrDashboardPage() {
   const [startDate, setStartDate] = useState(defaultStartDate);
-  const [entityId, setEntityId] = useState<number | "all" | undefined>();
+  const [entityId, setEntityId] = useState<number | "all">("all");
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [attendanceView, setAttendanceView] = useState<"Present" | "Absent" | "Late" | null>(null);
   const { data, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ["edxsv2", "hr-dashboard", startDate, entityId ?? "configured-entity"],
+    queryKey: ["edxsv2", "hr-dashboard", startDate, entityId],
     queryFn: () => {
       const params = new URLSearchParams({ startDate });
-      if (entityId !== undefined) params.set("entityId", String(entityId));
+      params.set("entityId", String(entityId));
       return api.get<{ data: HrDashboard }>(`/edxsv2/hr-dashboard?${params.toString()}`);
     },
     refetchInterval: 60_000,
@@ -192,7 +192,7 @@ export default function HrDashboardPage() {
 
   const dashboard = data?.data ?? EMPTY_DASHBOARD;
   const isInitialLoad = isLoading && !data;
-  const selectedEntityId = typeof entityId === "number" ? entityId : dashboard.selectedEntityId;
+  const selectedEntityId = typeof entityId === "number" ? entityId : null;
   const attendanceByName = Object.fromEntries(dashboard.attendance.map((item) => [item.name, item.value]));
   const totalRecorded = dashboard.attendance.reduce((sum, item) => sum + item.value, 0);
   const normalizedEmployeeSearch = employeeSearch.trim().toLowerCase();

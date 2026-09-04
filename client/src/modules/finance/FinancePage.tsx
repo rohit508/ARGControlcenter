@@ -189,7 +189,7 @@ function RecordGroupCard({ group }: { group: (typeof recordGroups)[number] }) {
   const maximum = Math.max(...values, 1);
 
   return (
-    <section className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_16px_34px_rgba(15,118,110,.16)] dark:border-slate-800 dark:bg-slate-900 dark:hover:border-teal-500/50">
+    <section className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-teal-400 hover:bg-teal-50/60 hover:shadow-[0_8px_18px_rgba(15,118,110,.12)] hover:ring-4 hover:ring-teal-500/10 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-teal-500/50 dark:hover:bg-slate-800/70">
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3.5 dark:border-slate-800">
         <div>
           <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50">{group.title}</h4>
@@ -221,7 +221,7 @@ function RecordGroupCard({ group }: { group: (typeof recordGroups)[number] }) {
 
 function SummaryTile({ label, value, note, accent, icon, alert, positive }: (typeof summaryTiles)[number]) {
   return (
-    <Panel className="group flex min-h-[104px] items-start gap-4 p-4 transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_16px_34px_rgba(15,118,110,.16)] dark:hover:border-teal-500/50">
+    <Panel className="group flex min-h-[104px] items-start gap-4 p-4 transition-all duration-200 hover:-translate-y-px hover:border-teal-400 hover:bg-teal-50/60 hover:shadow-[0_8px_18px_rgba(15,118,110,.12)] hover:ring-4 hover:ring-teal-500/10 dark:hover:border-teal-500/50 dark:hover:bg-slate-800/70">
       <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[10px] font-black transition-transform duration-300 ease-out group-hover:scale-105 ${accent}`}>{icon}</span>
       <div className="min-w-0">
         <p className="text-[11px] font-black uppercase tracking-[.16em] text-slate-500">{label}</p>
@@ -306,7 +306,7 @@ function OperationsAnalytics() {
 
   return (
     <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_16px_34px_rgba(15,118,110,.16)] dark:border-slate-800 dark:bg-slate-950/30 dark:hover:border-teal-500/50">
+      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-teal-400 hover:bg-teal-50/60 hover:shadow-[0_8px_18px_rgba(15,118,110,.12)] hover:ring-4 hover:ring-teal-500/10 dark:border-slate-800 dark:bg-slate-950/30 dark:hover:border-teal-500/50 dark:hover:bg-slate-800/70">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50">Record Mix</h4>
@@ -340,7 +340,7 @@ function OperationsAnalytics() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_16px_34px_rgba(15,118,110,.16)] dark:border-slate-800 dark:bg-slate-950/30 dark:hover:border-teal-500/50">
+      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-teal-400 hover:bg-teal-50/60 hover:shadow-[0_8px_18px_rgba(15,118,110,.12)] hover:ring-4 hover:ring-teal-500/10 dark:border-slate-800 dark:bg-slate-950/30 dark:hover:border-teal-500/50 dark:hover:bg-slate-800/70">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50">Highest Activity</h4>
