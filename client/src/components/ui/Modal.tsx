@@ -25,23 +25,27 @@ export default function Modal({ open, onClose, title, children, footer, widthCla
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/50" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[3px]" onClick={onClose} />
       <div
-        className={`relative w-full ${widthClassName} max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`relative flex w-full ${widthClassName} max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_28px_80px_rgba(15,23,42,.28)]`}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold">{title}</h2>
+        <div className="h-1 shrink-0 bg-gradient-to-r from-[#082650] via-blue-600 to-teal-400" />
+        <div className="flex items-center justify-between border-b border-slate-200/80 bg-gradient-to-r from-white via-slate-50/70 to-teal-50/50 px-6 py-4">
+          <h2 className="text-base font-bold tracking-tight text-slate-900">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none"
+            className="grid h-9 w-9 place-items-center rounded-xl text-xl leading-none text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/15"
           >
             ✕
           </button>
         </div>
-        <div className="px-5 py-4">{children}</div>
-        {footer && <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">{footer}</div>}
+        <div className="min-h-0 overflow-y-auto bg-slate-50/35 px-6 py-5">{children}</div>
+        {footer && <div className="flex justify-end gap-2 border-t border-slate-200/80 bg-white px-6 py-3">{footer}</div>}
       </div>
     </div>,
     document.body

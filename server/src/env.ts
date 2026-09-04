@@ -1,4 +1,11 @@
 import { z } from "zod";
+import dotenv from "dotenv";
+
+// dotenv only discovers `.env` automatically. Local development in this repo
+// uses `.env.local`, so load both before this module validates process.env.
+// Local values intentionally win without ever being committed.
+dotenv.config();
+dotenv.config({ path: ".env.local", override: true });
 
 /**
  * Validated at process startup, not discovered piecemeal when a route first touches a missing
@@ -15,6 +22,19 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16, "JWT_REFRESH_SECRET must be at least 16 characters"),
   CORS_ORIGINS: z.string().default("http://localhost:5173"), // comma-separated allowlist
   APP_URL: z.string().default("http://localhost:5173"), // web client origin, used to build links in emails
+
+  // EDXSv2 is the source of truth for HR. These values stay server-side so its
+  // bearer token is never exposed to the browser bundle.
+  EDXSV2_API_URL: z.string().url().optional(),
+  EDXSV2_API_TOKEN: z.string().min(1).optional(),
+  // Local EDXSv2 development can mint a short-lived read-only API token from
+  // the HR service's configured signing key. Production must use a dedicated
+  // EDXSV2_API_TOKEN instead.
+  EDXSV2_DEV_JWT_SECRET: z.string().min(16).optional(),
+  EDXSV2_JWT_ISSUER: z.string().default("EDXS.Auth.Service"),
+  EDXSV2_JWT_AUDIENCE: z.string().default("EDXS.Services"),
+  EDXSV2_CLIENT_ID: z.coerce.number().int().positive().optional(),
+  EDXSV2_ENTITY_ID: z.coerce.number().int().positive().optional(),
 
   // SMTP is optional: if SMTP_HOST is unset, mailer.ts logs instead of sending. Lets ticket
   // assignment notifications work in every environment without forcing a mail account on dev/test.

@@ -27,6 +27,7 @@ import { leadsRouter, customersRouter, opportunitiesRouter } from "./modules/crm
 import financeRoutes from "./modules/finance/finance.routes";
 import { vendorsRouter, purchaseOrdersRouter } from "./modules/procurement/procurement.routes";
 import { leaveRouter, attendanceRouter } from "./modules/hr/hr.routes";
+import edxsv2HrDashboardRoutes from "./modules/edxsv2/hr-dashboard.routes";
 import inventoryRoutes from "./modules/inventory/inventory.routes";
 import manufacturingRoutes from "./modules/manufacturing/manufacturing.routes";
 import assetsRoutes from "./modules/assets/assets.routes";
@@ -124,6 +125,7 @@ export function createApp() {
   app.use("/api/v1/purchase-orders", purchaseOrdersRouter);
   app.use("/api/v1/leave-requests", leaveRouter);
   app.use("/api/v1/attendance", attendanceRouter);
+  app.use("/api/v1/edxsv2/hr-dashboard", edxsv2HrDashboardRoutes);
   app.use("/api/v1/inventory", inventoryRoutes);
   app.use("/api/v1/manufacturing", manufacturingRoutes);
   app.use("/api/v1/assets", assetsRoutes);
