@@ -10,8 +10,8 @@ import { useEmployeeTaskStats, useEmployeeTasks } from "../modules/employee-task
 import { roleDisplayLabelsFor } from "../utils/roleLabels";
 
 // Admin's primary workflow group — must render first, in this exact order, per product spec.
-// Items here are active for Admin; every other nav item is rendered visible-but-disabled (gray,
-// unclickable) for Admin rather than hidden, so the full app surface stays discoverable.
+// Only items in this list render in the sidebar for Admin; anything else defined in NAV_GROUPS
+// below stays reachable by route/permission but is not shown as a nav link.
 const ADMIN_PRIMARY_PATHS = [
   "/employee-tasks",
   "/my-tasks",
@@ -186,12 +186,15 @@ export default function AppShell() {
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
       <aside
-        className={`${collapsed ? "w-16" : "w-60"} shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-150 flex flex-col`}
+        className={`${collapsed ? "w-16" : "w-64"} shrink-0 bg-white dark:bg-slate-900 transition-all duration-200 flex flex-col shadow-[1px_0_0_0_rgba(15,23,42,0.06)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.06)]`}
       >
-        <div className="h-14 flex items-center px-4 border-b border-slate-200 dark:border-slate-800">
-          <span className="font-semibold text-brand-600 dark:text-brand-100 truncate">{collapsed ? "A" : "ARG Control center"}</span>
+        <div className="h-16 flex items-center gap-2.5 px-4 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+            A
+          </div>
+          {!collapsed && <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">ARG Control center</span>}
         </div>
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
           {NAV_GROUPS.map((group) => {
             // Plain Users (and DepartmentHead-without-Admin) only ever see their allowed links —
             // everything else stays hidden, not grayed, since admin section names shouldn't be
@@ -208,44 +211,54 @@ export default function AppShell() {
             );
             if (visibleItems.length === 0) return null;
             return (
-              <div key={group.label} className="mb-3">
+              <div key={group.label}>
                 {!collapsed && (
-                  <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{group.label}</div>
+                  <div className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{group.label}</div>
                 )}
-                {visibleItems.map((item) => {
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.to === "/"}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-4 py-2 text-sm rounded-md mx-2 ${
-                          isActive
-                            ? "bg-brand-600 text-white"
-                            : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`
-                      }
-                    >
-                      {collapsed ? item.label.slice(0, 1) : item.label}
-                    </NavLink>
-                  );
-                })}
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => {
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.to === "/"}
+                        title={collapsed ? item.label : undefined}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-xl transition-all duration-150 ${
+                            isActive
+                              ? "bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-100 font-medium ring-1 ring-brand-100 dark:ring-brand-500/20"
+                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-700 dark:hover:text-slate-200"
+                          }`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 transition-colors ${isActive ? "bg-brand-500" : "bg-transparent"}`} aria-hidden />
+                            <span className="truncate">{collapsed ? item.label.slice(0, 1) : item.label}</span>
+                          </>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </nav>
-        <button
-          onClick={toggleSidebar}
-          className="m-2 rounded-md border border-slate-200 dark:border-slate-800 py-1.5 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          {collapsed ? "▶" : "◀ Collapse"}
-        </button>
-        {(!online || pending > 0) && !collapsed && (
-          <div className="mx-2 mb-2 px-2 py-1.5 rounded-md bg-warning-100 text-warning-500 text-xs flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-warning-500 inline-block" />
-            {!online ? "Offline — changes queued locally" : `${pending} change${pending === 1 ? "" : "s"} syncing…`}
-          </div>
-        )}
+        <div className="p-3 space-y-2 shrink-0">
+          {(!online || pending > 0) && !collapsed && (
+            <div className="px-2.5 py-1.5 rounded-lg bg-warning-100 dark:bg-warning-500/15 text-warning-500 text-xs flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-warning-500 inline-block shrink-0" />
+              <span className="truncate">{!online ? "Offline — changes queued locally" : `${pending} change${pending === 1 ? "" : "s"} syncing…`}</span>
+            </div>
+          )}
+          <button
+            onClick={toggleSidebar}
+            className="w-full rounded-lg py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+          >
+            {collapsed ? "▶" : "◀  Collapse"}
+          </button>
+        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
