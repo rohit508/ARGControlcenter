@@ -23,7 +23,7 @@ export interface UpdateStatusPayload {
   progressNotes?: string;
 }
 
-export function useEmployeeTasks(employeeId?: number, departmentId?: number, viewScope?: "all" | "my-team") {
+export function useEmployeeTasks(employeeId?: number, departmentId?: number, viewScope?: "all" | "my-team", enabled: boolean = true) {
   const queryKey = ["employee-tasks", { employeeId, departmentId, viewScope }];
   const params = new URLSearchParams();
   if (employeeId) params.set("employeeId", String(employeeId));
@@ -35,6 +35,7 @@ export function useEmployeeTasks(employeeId?: number, departmentId?: number, vie
     queryKey,
     queryFn: () => api.get<{ data: EmployeeTask[] }>(path),
     refetchInterval: POLL_MS,
+    enabled,
   });
 }
 
@@ -55,7 +56,7 @@ export function useDepartmentTeams() {
   });
 }
 
-export function useEmployeeTaskStats(employeeId?: number, viewScope?: "all" | "my-team") {
+export function useEmployeeTaskStats(employeeId?: number, viewScope?: "all" | "my-team", enabled: boolean = true) {
   const queryKey = ["employee-tasks", "stats", { employeeId, viewScope }];
   const params = new URLSearchParams();
   if (employeeId) params.set("employeeId", String(employeeId));
@@ -66,6 +67,7 @@ export function useEmployeeTaskStats(employeeId?: number, viewScope?: "all" | "m
     queryKey,
     queryFn: () => api.get<{ data: EmployeeTaskStats }>(path),
     refetchInterval: POLL_MS,
+    enabled,
   });
 }
 
