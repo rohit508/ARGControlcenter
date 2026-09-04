@@ -113,9 +113,13 @@ export default function LoginPage() {
                 className="w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-colors"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                type="email"
+                // type="text", not "email" — most accounts use an email address, but this field
+                // also accepts a bare login alias (e.g. "argadmin"), and type="email" makes the
+                // browser block/flag submission with a native "Invalid email" bubble before this
+                // form's own onSubmit (and the server's own validation) ever run.
+                type="text"
                 placeholder="you@company.com"
-                autoComplete="email"
+                autoComplete="username"
                 autoFocus
                 required
               />
