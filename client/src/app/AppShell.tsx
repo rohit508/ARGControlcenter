@@ -200,42 +200,19 @@ export default function AppShell() {
               ? group.items.filter((item) => USER_ALLOWED_PATHS.includes(item.to))
               : group.items;
             if (items.length === 0) return null;
-            const groupDisabled =
-              isAdmin && items.every((item) => !ADMIN_PRIMARY_PATHS.includes(item.to));
+            // Disabled ("Coming Soon") items are hidden from the sidebar rather than shown grayed
+            // out — still fully defined in NAV_GROUPS/routes below, just not rendered here, so
+            // nothing is deleted, only not displayed while unavailable.
+            const visibleItems = items.filter((item) =>
+              isAdmin ? ADMIN_PRIMARY_PATHS.includes(item.to) : !item.roles || item.roles.some((r) => user?.roles.includes(r))
+            );
+            if (visibleItems.length === 0) return null;
             return (
               <div key={group.label} className="mb-3">
                 {!collapsed && (
-                  <div
-                    className={`px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide ${
-                      groupDisabled ? "text-slate-300 dark:text-slate-700" : "text-slate-400"
-                    }`}
-                  >
-                    {group.label}
-                    {groupDisabled && <span className="ml-1 font-normal normal-case text-slate-300 dark:text-slate-700">(Coming Soon)</span>}
-                  </div>
+                  <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{group.label}</div>
                 )}
-                {items.map((item) => {
-                  const allowed = isAdmin
-                    ? ADMIN_PRIMARY_PATHS.includes(item.to)
-                    : !item.roles || item.roles.some((r) => user?.roles.includes(r));
-
-                  if (!allowed) {
-                    return (
-                      <span
-                        key={item.to}
-                        aria-disabled="true"
-                        title="Not available for your role"
-                        className="flex items-center gap-2 px-4 py-2 text-sm rounded-md mx-2 text-slate-400 dark:text-slate-600 opacity-50 cursor-not-allowed pointer-events-none select-none"
-                      >
-                        {collapsed ? item.label.slice(0, 1) : item.label}
-                        {/* Whole-group case already shows "(Coming Soon)" once on the group
-                            heading above — only repeat it here for a mixed group (some items
-                            active, this one not), so the tag isn't shown twice for the same item. */}
-                        {!collapsed && !groupDisabled && <span className="text-[10px] font-normal text-slate-400 dark:text-slate-600">(Coming Soon)</span>}
-                      </span>
-                    );
-                  }
-
+                {visibleItems.map((item) => {
                   return (
                     <NavLink
                       key={item.to}
