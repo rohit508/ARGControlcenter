@@ -1,5 +1,7 @@
 import { type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import Dropdown from "../../components/ui/Dropdown";
 
 const recordCounts = [
   ["Air Export Jobs", "8"],
@@ -42,6 +44,41 @@ const summaryTiles = [
   { label: "Unbilled Jobs", value: "10", note: "No committed sales document yet", accent: "bg-yellow-50 text-yellow-700", icon: "UB" },
 ];
 
+const branchOptions = [
+  { value: "all", label: "All" },
+  { value: "karachi", label: "Karachi" },
+  { value: "lahore", label: "Lahore" },
+  { value: "islamabad", label: "Islamabad" },
+];
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function defaultDateRange() {
+  const end = new Date();
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - 1);
+
+  return {
+    startDate: formatDateInputValue(start),
+    endDate: formatDateInputValue(end),
+  };
+}
+
+function parseLocalDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function displayDateInput(value: string) {
+  return parseLocalDate(value).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+}
+
 const laneProfitability = [
   { lane: "KHI-DXB", jobs: 14, margin: 28, revenue: "4.8M" },
   { lane: "LHE-IST", jobs: 11, margin: 24, revenue: "3.9M" },
@@ -77,13 +114,6 @@ const moduleVolume = [
   { name: "Other charges", count: 19, color: "#d97706" },
   { name: "CPV vouchers", count: 19, color: "#0284c7" },
   { name: "BRV vouchers", count: 14, color: "#e11d48" },
-];
-
-const freightModeVolume = [
-  { name: "Sea export", jobs: 10, color: "#0f766e" },
-  { name: "Air import", jobs: 9, color: "#2563eb" },
-  { name: "Sea import", jobs: 9, color: "#7c3aed" },
-  { name: "Air export", jobs: 8, color: "#d97706" },
 ];
 
 type DocumentConfig = {
@@ -212,11 +242,71 @@ function ChartHeader({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
+function CalendarIcon() {
+  return <svg viewBox="0 0 24 24" className="h-5 w-5 transition-transform duration-300 ease-out group-hover:scale-105" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4m8-4v4M3 10h18" /></svg>;
+}
+
+function BranchIcon() {
+  return <svg viewBox="0 0 24 24" className="h-5 w-5 transition-transform duration-300 ease-out group-hover:scale-105" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 21V5l8-2v18M12 8h8v13M7 8h2m-2 4h2m-2 4h2m8-5h1m-1 4h1" /></svg>;
+}
+
+function FinanceDatePicker({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const date = parseLocalDate(value);
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    const date = parseLocalDate(value);
+    setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+  }, [value]);
+
+  const firstGridDate = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1 - viewMonth.getDay());
+  const calendarDays = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(firstGridDate);
+    date.setDate(firstGridDate.getDate() + index);
+    return date;
+  });
+
+  return (
+    <div ref={containerRef} className="relative z-20 w-[280px] shrink-0">
+      <button type="button" aria-label={`Choose ${label.toLowerCase()}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((current) => !current)} className={`group inline-flex h-12 w-full items-center gap-3 rounded-xl border bg-white px-3.5 text-left shadow-[0_2px_6px_rgba(15,23,42,.04)] outline-none transition-all duration-200 hover:-translate-y-px hover:border-teal-400 hover:bg-teal-50/60 hover:shadow-[0_8px_18px_rgba(15,118,110,.12)] hover:ring-4 hover:ring-teal-500/10 focus-visible:ring-4 focus-visible:ring-teal-500/20 active:translate-y-0 active:scale-[.985] dark:bg-slate-950 ${open ? "border-teal-500 bg-teal-50/60 shadow-[0_8px_18px_rgba(15,118,110,.12)] ring-4 ring-teal-500/10" : "border-slate-200 dark:border-slate-700"}`}>
+        <span className="min-w-0 flex-1"><span className="block text-[10px] font-bold uppercase tracking-[.08em] text-slate-400">{label}</span><span className="mt-0.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">{displayDateInput(value)}</span></span>
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors ${open ? "bg-teal-100 text-teal-700" : "bg-slate-100 text-slate-500 group-hover:bg-teal-100 group-hover:text-teal-700 dark:bg-slate-800"}`}><CalendarIcon /></span>
+      </button>
+      {open && <div role="dialog" aria-label={`Choose ${label.toLowerCase()}`} className="absolute left-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,.16)] dark:border-slate-700 dark:bg-slate-950">
+        <div className="mb-3 flex items-center justify-between px-1"><button type="button" onClick={() => setViewMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100" aria-label="Previous month"><svg viewBox="0 0 16 16" className="h-4 w-4" fill="none"><path d="m10 3-5 5 5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button><p className="text-sm font-bold text-slate-900 dark:text-slate-50">{viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p><button type="button" onClick={() => setViewMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100" aria-label="Next month"><svg viewBox="0 0 16 16" className="h-4 w-4" fill="none"><path d="m6 3 5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button></div>
+        <div className="grid grid-cols-7 text-center text-xs">{["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => <span key={day} className="py-2 font-semibold text-slate-600 dark:text-slate-300">{day}</span>)}{calendarDays.map((date) => { const dayValue = formatDateInputValue(date); const isSelected = dayValue === value; const isOutsideMonth = date.getMonth() !== viewMonth.getMonth(); return <button key={dayValue} type="button" onClick={() => { onChange(dayValue); setOpen(false); }} className={`mx-auto grid h-9 w-9 place-items-center rounded-lg font-medium transition-colors ${isSelected ? "bg-blue-600 text-white shadow-sm" : isOutsideMonth ? "text-slate-300 dark:text-slate-600" : "text-slate-700 hover:bg-teal-50 hover:text-teal-700 dark:text-slate-200 dark:hover:bg-slate-800"}`}>{date.getDate()}</button>; })}</div>
+      </div>}
+    </div>
+  );
+}
+
 function OperationsAnalytics() {
   const totalRecords = recordCategoryMix.reduce((total, category) => total + category.value, 0);
 
   return (
-    <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+    <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
       <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -271,29 +361,6 @@ function OperationsAnalytics() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50">Freight Movement</h4>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Jobs split by shipment mode</p>
-          </div>
-          <strong className="text-sm font-black text-slate-900 dark:text-slate-50">36 jobs</strong>
-        </div>
-        <div className="mt-5 space-y-3.5">
-          {freightModeVolume.map((mode) => (
-            <div key={mode.name}>
-              <div className="mb-1.5 flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-600 dark:text-slate-300">{mode.name}</span>
-                <strong className="text-slate-900 dark:text-slate-50">{mode.jobs}</strong>
-              </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                <span className="block h-full rounded-full" style={{ width: `${mode.jobs * 10}%`, backgroundColor: mode.color }} />
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
@@ -414,13 +481,16 @@ function DocumentListScreen({ label, count, onBack }: { label: string; count: st
 }
 
 export default function FinancePage() {
+  const initialDates = defaultDateRange();
+  const [branch, setBranch] = useState("all");
+  const [startDate, setStartDate] = useState(initialDates.startDate);
+  const [endDate, setEndDate] = useState(initialDates.endDate);
+
   return (
     <div className="mx-auto max-w-[1540px] space-y-5 pb-8 text-slate-800 dark:text-slate-100">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[.16em] text-brand-600 dark:text-brand-300">Freight operations</p>
-          <h1 className="mt-1 text-[32px] font-bold tracking-tight text-slate-900 dark:text-slate-50">Freight And Finance</h1>
-          <p className="mt-1.5 text-[15px] text-slate-500 dark:text-slate-400">Total records for August 2026 - as at 13 Aug 2026</p>
+          <h1 className="text-[32px] font-bold tracking-tight text-slate-900 dark:text-slate-50">Freight And Finance</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button className="h-10 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">Email</button>
@@ -434,32 +504,33 @@ export default function FinancePage() {
       <Panel className="p-5">
         <div className="mb-3">
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-50">Total Records</h3>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Records per module</p>
         </div>
 
-        <div className="mb-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_4px_rgba(15,23,42,.04)] dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex min-w-max items-end gap-2.5">
-            <label className="block w-[170px] shrink-0">
-              <span className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500 dark:text-slate-400">Branch</span>
-              <select className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-                <option>All</option>
-                <option>Karachi</option>
-                <option>Lahore</option>
-                <option>Islamabad</option>
-              </select>
-            </label>
-            <label className="block w-[170px] shrink-0">
-              <span className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500 dark:text-slate-400">Starting Date</span>
-              <input type="date" className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200" />
-            </label>
-            <label className="block w-[170px] shrink-0">
-              <span className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500 dark:text-slate-400">Ending Date</span>
-              <input type="date" className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200" />
-            </label>
-            <button className="h-9 shrink-0 rounded-md bg-brand-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700">Apply</button>
-            <button className="h-9 shrink-0 rounded-md border border-slate-200 bg-white px-5 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800">Show Detail</button>
-            <button className="h-9 shrink-0 rounded-md border border-slate-200 bg-white px-5 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800">Clear</button>
+        <div className="relative z-20 mb-4 overflow-visible rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_4px_rgba(15,23,42,.04)] dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Dropdown value={branch} onChange={setBranch} menuLabel="Branch" ariaLabel="Choose branch" className="w-[240px] shrink-0" icon={<BranchIcon />} options={branchOptions} />
+            <FinanceDatePicker label="Starting Date" value={startDate} onChange={setStartDate} />
+            <FinanceDatePicker label="Ending Date" value={endDate} onChange={setEndDate} />
+            <button className="h-12 shrink-0 rounded-xl bg-brand-600 px-5 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:bg-brand-700 hover:shadow-[0_8px_18px_rgba(37,99,235,.18)] active:translate-y-0 active:scale-[.985]">Apply</button>
+            <button
+              type="button"
+              onClick={() => {
+                const dates = defaultDateRange();
+                setBranch("all");
+                setStartDate(dates.startDate);
+                setEndDate(dates.endDate);
+              }}
+              className="h-12 shrink-0 rounded-xl border border-slate-200 bg-white px-5 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-px hover:bg-slate-50 hover:shadow-[0_8px_18px_rgba(15,23,42,.08)] active:translate-y-0 active:scale-[.985] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Clear
+            </button>
           </div>
+        </div>
+
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+          {summaryTiles.map((tile) => (
+            <SummaryTile key={tile.label} {...tile} />
+          ))}
         </div>
 
         <OperationsAnalytics />
@@ -471,13 +542,6 @@ export default function FinancePage() {
         </div>
       </Panel>
 
-      <FreightCharts />
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        {summaryTiles.map((tile) => (
-          <SummaryTile key={tile.label} {...tile} />
-        ))}
-      </div>
     </div>
   );
 }
