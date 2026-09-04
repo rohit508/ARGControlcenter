@@ -198,8 +198,11 @@ function ChartTooltip({ active, payload, label, formatter }: any) {
   );
 }
 
-// Compact "Top N" table shared by the sidebar-style widgets — no header chrome, dense rows,
-// clickable-looking codes to match the screenshot's convention (shipment/route codes in brand color).
+// Compact "Top N" / record-list table shared by the plain-grid widgets (Delayed Shipments,
+// Pending Bookings, Top Routes). Softened from the original boxed-spreadsheet look: small-caps
+// muted header instead of a bold row, hairline dividers only between rows (no cell borders), a
+// touch more vertical breathing room, and zebra-free — a quiet hover wash is enough separation
+// without turning the whole thing into a grid of "cartons."
 function MiniTable<T extends { [k: string]: any }>({
   columns,
   rows,
@@ -211,21 +214,26 @@ function MiniTable<T extends { [k: string]: any }>({
 }) {
   return (
     <div className="overflow-x-auto -mx-1">
-      <table className="w-full text-xs">
+      <table className="w-full text-sm">
         <thead>
-          <tr className="text-slate-400 dark:text-slate-500">
+          <tr>
             {columns.map((c) => (
-              <th key={c.key} className={`px-1 pb-2 font-semibold ${c.align === "right" ? "text-right" : "text-left"}`}>
+              <th
+                key={c.key}
+                className={`px-1.5 pb-2.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 ${
+                  c.align === "right" ? "text-right" : "text-left"
+                }`}
+              >
                 {c.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+        <tbody className="divide-y divide-slate-100/80 dark:divide-slate-800/80">
           {rows.map((row) => (
-            <tr key={row[keyField]} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+            <tr key={row[keyField]} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
               {columns.map((c) => (
-                <td key={c.key} className={`px-1 py-1.5 ${c.align === "right" ? "text-right" : ""}`}>
+                <td key={c.key} className={`px-1.5 py-2.5 text-slate-600 dark:text-slate-300 ${c.align === "right" ? "text-right" : ""}`}>
                   {c.render ? c.render(row) : row[c.key]}
                 </td>
               ))}
@@ -455,7 +463,15 @@ export default function ShipmentDashboardPage() {
         </div>
       </div>
 
-      <SectionCard title="Delayed & At Risk Shipments" action={<span className="text-xs text-danger-500 font-semibold">{filteredDelayed.length} late</span>}>
+      <SectionCard
+        title="Delayed & At Risk Shipments"
+        action={
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-danger-500" aria-hidden />
+            {filteredDelayed.length} late
+          </span>
+        }
+      >
         <MiniTable
           keyField="code"
           rows={filteredDelayed}
@@ -467,7 +483,12 @@ export default function ShipmentDashboardPage() {
             {
               key: "status",
               header: "Status",
-              render: () => <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-danger-100 text-danger-500">Late</span>,
+              render: () => (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-danger-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-danger-500" aria-hidden />
+                  Late
+                </span>
+              ),
             },
           ]}
         />
