@@ -237,26 +237,13 @@ function MiniTable<T extends { [k: string]: any }>({
   );
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
-}
-
-// Deterministic hash so the same name always lands on the same accent — avoids every row looking
-// identical (all brand-600) while staying stable across re-renders/re-fetches.
-const RANK_ACCENTS = [
-  { ring: "ring-indigo-200 dark:ring-indigo-500/30", badge: "bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300", bar: "bg-indigo-500" },
-  { ring: "ring-cyan-200 dark:ring-cyan-500/30", badge: "bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-300", bar: "bg-cyan-500" },
-  { ring: "ring-violet-200 dark:ring-violet-500/30", badge: "bg-violet-100 dark:bg-violet-500/15 text-violet-600 dark:text-violet-300", bar: "bg-violet-500" },
-  { ring: "ring-amber-200 dark:ring-amber-500/30", badge: "bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300", bar: "bg-amber-500" },
-  { ring: "ring-emerald-200 dark:ring-emerald-500/30", badge: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300", bar: "bg-emerald-500" },
-];
-
 // Ranked "leaderboard" widget — distinct from MiniTable (the plain data grids used for Delayed
-// Shipments / Pending Bookings elsewhere on this page) by design: rank badge + initials avatar,
-// a share-of-max progress bar under each row instead of a bare number, and a #1 row that's
-// visually heavier. Built for the four "Top N" sections specifically, since those are read as a
-// ranking ("who's #1"), not a record set to scan — the row chrome should say that at a glance.
+// Shipments / Pending Bookings elsewhere on this page) by a share-of-max progress bar under each
+// row instead of a bare number in a column. Deliberately restrained: one muted brand-tinted bar
+// color for every row (not a different hue per rank — that read as playful/toy-like, "cartons"),
+// a plain numbered rank marker instead of a colored ring + emoji trophy, and hairline row
+// dividers instead of hover-only chrome, so it reads as a quiet enterprise widget rather than a
+// game leaderboard.
 function Leaderboard<T extends { [k: string]: any }>({
   rows,
   keyField,
@@ -276,16 +263,19 @@ function Leaderboard<T extends { [k: string]: any }>({
 }) {
   const max = Math.max(1, ...rows.map((r) => Number(r[metricField]) || 0));
   return (
-    <div className="space-y-1">
+    <div className="divide-y divide-slate-100 dark:divide-slate-800">
       {rows.map((row, i) => {
-        const accent = RANK_ACCENTS[i % RANK_ACCENTS.length];
         const value = Number(row[metricField]) || 0;
-        const pct = Math.max(4, Math.round((value / max) * 100));
+        const pct = Math.max(3, Math.round((value / max) * 100));
         return (
-          <div key={row[keyField]} className="flex items-center gap-3 py-1.5 px-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
-            <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold ring-2 ${accent.ring} ${accent.badge}`}>
-              {i === 0 ? "🏆" : initials(row[nameField])}
-            </div>
+          <div key={row[keyField]} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+            <span
+              className={`shrink-0 w-5 text-center text-[11px] font-semibold tabular-nums ${
+                i === 0 ? "text-brand-600 dark:text-brand-100" : "text-slate-400 dark:text-slate-500"
+              }`}
+            >
+              {i + 1}
+            </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{row[nameField]}</span>
@@ -293,9 +283,9 @@ function Leaderboard<T extends { [k: string]: any }>({
                   {metricFormat ? metricFormat(value) : value}
                 </span>
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                  <div className={`h-full rounded-full ${accent.bar}`} style={{ width: `${pct}%` }} />
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex-1 h-1 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div className="h-full rounded-full bg-brand-400 dark:bg-brand-200" style={{ width: `${pct}%` }} />
                 </div>
                 {secondaryField && (
                   <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
